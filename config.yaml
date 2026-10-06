@@ -1,0 +1,56 @@
+experiments:
+  # Logged only (the station dataset below carries its own weather columns,
+  # listed in dataset.1.metero_var - this list is not used to select them).
+  metero_use: ['temperature', 'relative_humidity', 'rain', 'wind_speed10', 'wind_direction10']
+  save_npy: True
+  dataset_num: 1
+  model: AirLapseV2
+  # AirLapseV2's optional continuous ODE transport branch: off by default
+  # (markedly slower per epoch; not yet shown to help on this dataset).
+  airlapsev2_ode_transport: false
+# Models (set `model:` above to one of these names):
+#   generic:          MLP, LSTM, GRU, AGCRN, MegaCRN
+#   transformers:     Informer, Autoformer, PatchTST, STAEformer, MGSFformer,
+#                     TimeXer, WPMixer, DTAF
+#   air-quality:      PM25_GNN (+ PM25_GNN_nosub, GC_LSTM, nodesFC_GRU),
+#                     AirDDE, AirPhyNet, AirDualODE, AirFormer
+#   proposed:         AirLapse, AirLapseV2
+
+train:
+  batch_size: 32
+  epochs: 50
+  exp_repeat: 5
+  hist_len: 24      # hours of history
+  pred_len: 24      # hours ahead
+  weight_decay: 0.0005
+  early_stop: 10
+  lr: 0.0005
+
+# Results go to ./results unless RESULTS_DIR is set (see util.py).
+filepath: {}
+
+dataset:
+  # dataset.py reads these two as fallbacks; dataset 1 sets its own.
+  data_start: [[2024, 10, 1, 0, 0], GMT]
+  data_end: [[2026, 9, 30, 23, 0], GMT]
+
+  # BC + Washington hourly PM2.5 from public reference monitors (BC Ministry
+  # of Environment, Metro Vancouver, ECCC, WA Ecology, Spokane Regional Clean
+  # Air Agency; via AirNow) + ERA5 weather, built by build_dataset.py.
+  # Chronological split: train Oct 2024 - Dec 2025 (every season once), val
+  # Jan - Mar 2026, test Apr - Sep 2026 (spring through the summer smoke season).
+  1:
+    family: sensor
+    data_fp: data/BCWA_AirNow_2y.npy
+    city_fp: data/site_bcwa_airnow_2y.txt
+    metero_var: ['temperature', 'relative_humidity', 'rain', 'wind_speed10', 'wind_direction10']
+    k_neighbors: 5
+    freq_hours: 1
+    data_start: [[2024, 10, 1, 0, 0], GMT]
+    data_end: [[2026, 9, 30, 23, 0], GMT]
+    train_start: [[2024, 10, 1, 0, 0], GMT]
+    train_end: [[2025, 12, 31, 23, 0], GMT]
+    val_start: [[2026, 1, 1, 0, 0], GMT]
+    val_end: [[2026, 3, 31, 23, 0], GMT]
+    test_start: [[2026, 4, 1, 0, 0], GMT]
+    test_end: [[2026, 9, 30, 23, 0], GMT]

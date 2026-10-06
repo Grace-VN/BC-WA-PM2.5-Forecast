@@ -1,0 +1,116 @@
+node,aqsid,name,agency,lat,lon,country,region,completeness,longest_gap_h,elevation
+0,000105504,FORT ST JOHN LEARNING CENTRE,British Columbia Ministry of Environment,56.244722,-120.856111,CA,BC,0.9674086757990867,192,680.0
+1,124000102402,Smithers Muheim Memorial,British Columbia Ministry of Environment,54.778486,-127.168542,CA,BC,0.8932077625570777,470,495.0
+2,000102503,TERRACE SKEENA MIDDLE SCHOOL,British Columbia Ministry of Environment,54.52167,-128.6075,CA,BC,0.9751712328767124,135,69.0
+3,000105101,Houston Firehall,British Columbia Ministry of Environment,54.3972,-126.645,CA,BC,0.9600456621004566,370,600.0
+4,000105201,Burns Lake Fire Centre,British Columbia Ministry of Environment,54.2307,-125.7643,CA,BC,0.8775114155251141,637,709.0
+5,000103904,KITIMAT WHITESAIL,British Columbia Ministry of Environment,54.066909,-128.639131,CA,BC,0.9615867579908676,176,92.0
+6,000103901,Kitimat Riverlodge,British Columbia Ministry of Environment,54.05389,-128.671436,CA,BC,0.9700913242009133,73,13.0
+7,000103902,Kitimat Haul Road,British Columbia Ministry of Environment,54.029194,-128.70269,CA,BC,0.944920091324201,146,9.0
+8,000106900,Vanderhoof Courthouse,British Columbia Ministry of Environment,54.0163,-124.0061,CA,BC,0.85,721,640.0
+9,000103905,Kitimat Haisla Village,British Columbia Ministry of Environment,53.973228,-128.650768,CA,BC,0.9588470319634703,106,4.0
+10,000100202,PRG Plaza 400,British Columbia Ministry of Environment,53.91472,-122.74194,CA,BC,0.9015981735159817,812,577.0
+11,124000101706,Quesnel Johnston Avenue,British Columbia Ministry of Environment,52.96936,-122.4934,CA,BC,0.9360730593607306,370,475.0
+12,124000106101,Valemount,British Columbia Ministry of Environment,52.832459,-119.269821,CA,BC,0.9646118721461188,135,791.0
+13,000102701,Williams Lake Columneetza School,British Columbia Ministry of Environment,52.14428,-122.150391,CA,BC,0.9494292237442923,155,660.0
+14,000103202,Golden Helipad,British Columbia Ministry of Environment,51.2975,-116.966,CA,BC,0.969634703196347,370,789.0
+15,000100401,Kamloops Federal Building,British Columbia Ministry of Environment,50.67477,-120.334016,CA,BC,0.9492009132420092,156,364.0
+16,000104003,Vernon Science Centre,British Columbia Ministry of Environment,50.260617,-119.270723,CA,BC,0.9391552511415525,475,377.0
+17,000105001,Whistler Meadow Park,British Columbia Ministry of Environment,50.144285,-122.960402,CA,BC,0.9352739726027397,370,651.0
+18,000102801,Elk Falls Dogwood,British Columbia Ministry of Environment,50.018425,-125.2484,CA,BC,0.9242009132420091,327,59.0
+19,124000103011,Elkford Rocky Mountain Elementary School,British Columbia Ministry of Environment,50.007794,-114.93342,CA,BC,0.9650114155251142,71,1335.0
+20,124000100703,Kelowna KLO Road,British Columbia Ministry of Environment,49.862119,-119.467461,CA,BC,0.9194634703196347,370,350.0
+21,124000103021,Sparwood Centennial Square,British Columbia Ministry of Environment,49.732786,-114.88766,CA,BC,0.9382990867579909,363,1136.0
+22,000101603,SQUAMISH ELEMENTARY,British Columbia Ministry of Environment,49.70516,-123.15133,CA,BC,0.9221461187214612,436,4.0
+23,124000101904,Cranbrook Muriel Baxter,British Columbia Ministry of Environment,49.507103,-115.753682,CA,BC,0.934931506849315,566,941.0
+24,000105301,Langdale Elementary,British Columbia Ministry of Environment,49.438848,-123.479185,CA,BC,0.9829337899543379,65,78.0
+25,000101401,Hope,Metro Vancouver,49.36972,-121.49944,CA,BC,0.976027397260274,63,36.0
+26,124000100138,Horseshoe Bay,Metro Vancouver,49.368,-123.277,CA,BC,0.994406392694064,16,56.0
+27,000100132,Mahon Park,Metro Vancouver,49.323891,-123.083611,CA,BC,0.9851598173515982,57,64.0
+28,000103502,Castlegar Zinio Park,British Columbia Ministry of Environment,49.317698,-117.661527,CA,BC,0.9545091324200913,370,436.0
+29,124000100121,Second Narrows,Metro Vancouver,49.3,-123.02,CA,BC,0.9896689497716895,32,4.0
+30,000100111,Rocky Point Park,Metro Vancouver,49.28083,-122.84917,CA,BC,0.9935502283105023,22,0.0
+31,000100110,Kensington Park,Metro Vancouver,49.2794,-122.9711,CA,BC,0.9925228310502283,29,110.0
+32,000102602,Port Alberni Elementary,British Columbia Ministry of Environment,49.261014,-124.806628,CA,BC,0.8971461187214612,526,14.0
+33,124000100141,Vancouver-Clark Drive,Metro Vancouver,49.26029,-123.077811,CA,BC,0.9932077625570777,17,30.0
+34,000101202,Pitt Meadows,Metro Vancouver,49.24528,-122.70889,CA,BC,0.9848744292237442,56,2.0
+35,124000100145,Agassiz - Centennial Park,Metro Vancouver,49.23836,-121.77478,CA,BC,0.9863584474885845,32,17.0
+36,124000100103,New Westminster,Metro Vancouver,49.227045,-122.894487,CA,BC,0.9815639269406393,23,48.0
+37,000100119,Burnaby South,Metro Vancouver,49.21528,-122.98556,CA,BC,0.9929794520547945,20,122.0
+38,000102102,Nanaimo Labieux Road,British Columbia Ministry of Environment,49.20083,-123.99389,CA,BC,0.9608447488584475,204,110.0
+39,000100134,Vancouver Airport,Metro Vancouver,49.18639,-123.15222,CA,BC,0.9943493150684931,16,2.0
+40,000100125,North Delta,Metro Vancouver,49.15833,-122.90167,CA,BC,0.9851598173515982,141,109.0
+41,000101101,Chilliwack,Metro Vancouver,49.15611,-121.94056,CA,BC,0.9871004566210045,70,12.0
+42,000100128,Richmond South,Metro Vancouver,49.14139,-123.10833,CA,BC,0.9937214611872146,16,2.0
+43,000100127,Surrey East,Metro Vancouver,49.13278,-122.69417,CA,BC,0.9940068493150684,20,84.0
+44,000102103,Harmac Cedar Woodbank,British Columbia Ministry of Environment,49.114165,-123.850165,CA,BC,0.8661529680365296,1125,23.0
+45,000101301,Langley,Metro Vancouver,49.09556,-122.56694,CA,BC,0.9883561643835617,26,87.0
+46,000101003,Abbotsford,Metro Vancouver,49.04278,-122.30972,CA,BC,0.9894977168949771,57,54.0
+47,000104101,Grand Forks City Hall,British Columbia Ministry of Environment,49.031168,-118.439088,CA,BC,0.9860159817351598,66,516.0
+48,000101005,Abbotsford Airport,Metro Vancouver,49.021506,-122.326556,CA,BC,0.9938356164383562,16,65.0
+49,000100140,Tsawwassen,Metro Vancouver,49.009869,-123.082017,CA,BC,0.9950342465753425,21,58.0
+50,000106701,Crofton Substation,British Columbia Ministry of Environment,48.874529,-123.653929,CA,BC,0.9091324200913242,195,38.0
+51,000104804,Duncan College Street,British Columbia Ministry of Environment,48.786114,-123.717307,CA,BC,0.8670662100456621,1404,30.0
+52,000100304,Victoria Topaz,British Columbia Ministry of Environment,48.441942,-123.363165,CA,BC,0.9337328767123287,646,29.0
+53,000100308,Colwood City Hall,British Columbia Ministry of Environment,48.42389,-123.49278,CA,BC,0.8740296803652968,1646,77.0
+54,530730005,Custer-Loomis (SO-AQS),Washington Department of Ecology,48.950699,-122.554398,US,WA,0.9751141552511415,103,27.0
+55,530730019,Bellingham Pacific,Washington Department of Ecology,48.760036,-122.456463,US,WA,0.9899543378995433,67,26.0
+56,530650005,Colville-E 1st St,Washington Department of Ecology,48.54469,-117.903222,US,WA,0.9714611872146118,145,495.0
+57,530570011,Anacortes-202 Ave (SO-AQS),Washington Department of Ecology,48.52008,-122.613213,US,WA,0.9800799086757991,22,4.0
+58,530579999,Anacortes-Bartholomew Rd (US),Washington Department of Ecology,48.465352,-122.560402,US,WA,0.9014840182648401,360,24.0
+59,530570015,Mt Vernon-S 2nd St,Washington Department of Ecology,48.410198,-122.337601,US,WA,0.9679223744292238,191,6.0
+60,530470013,Omak-Colville Tribe,Washington Department of Ecology,48.39999,-119.518959,US,WA,0.9678082191780822,97,261.0
+61,530090015,Neah Bay 2-Makah Tribe,Washington Department of Ecology,48.366058,-124.610046,US,WA,0.9301369863013699,162,0.0
+62,530470009,Twisp-S Lincoln St,Washington Department of Ecology,48.36472,-120.12007,US,WA,0.9273972602739726,624,492.0
+63,530610020,Darrington-Fir St,Washington Department of Ecology,48.246799,-121.603104,US,WA,0.9665525114155251,171,176.0
+64,530310003,Port Townsend-San Juan,Washington Department of Ecology,48.129101,-122.7789,US,WA,0.9907534246575342,57,11.0
+65,530090017,Port Angeles-E 5th St,Washington Department of Ecology,48.115,-123.436434,US,WA,0.9168949771689497,1057,30.0
+66,530611007,Marysville-7th Ave,Washington Department of Ecology,48.054315,-122.171529,US,WA,0.9752853881278539,100,9.0
+67,840530610022,Everett-Beverly Park Rd,Washington Department of Ecology,47.89371,-122.26982,US,WA,0.9875,147,175.0
+68,530070007,Chelan-Woodin Ave,Washington Department of Ecology,47.83861,-120.02306,US,WA,0.9163812785388128,814,333.0
+69,530639995,Colbert-Greenbluff,Spokane Regional Clean Air Agency,47.808226,-117.34327,US,WA,0.9638127853881279,335,579.0
+70,530330024,Lake Forest Park-Town Center,Washington Department of Ecology,47.753633,-122.277192,US,WA,0.9878424657534246,89,17.0
+71,530630047,Spokane-N Monroe St,Washington Department of Ecology,47.69983,-117.42631,US,WA,0.9972031963470319,41,626.0
+72,530630021,Spokane-Augusta Ave,Washington Department of Ecology,47.672501,-117.364899,US,WA,0.9254566210045662,677,585.0
+73,840530630017,Spokane Valley-E Broadway Ave,Washington Department of Ecology,47.663962,-117.25765,US,WA,0.9749429223744293,168,614.0
+74,840530630054,Spokane-E Sprague Ave,Washington Department of Ecology,47.65709,-117.3678,US,WA,0.8884132420091324,1533,589.0
+75,530639999,Airway Heights-West 12th (US),Washington Department of Ecology,47.645351,-117.589027,US,WA,0.9775114155251141,136,727.0
+76,530330031,Bellevue-SE 12th,Washington Department of Ecology,47.600863,-122.148397,US,WA,0.9797374429223744,170,90.0
+77,530070010,Leavenworth-Evans St,Washington Department of Ecology,47.5988,-120.6647,US,WA,0.9082191780821918,1355,364.0
+78,530330030,Seattle-10th & Weller,Washington Department of Ecology,47.597222,-122.319722,US,WA,0.9655821917808219,163,42.0
+79,530350007,Bremerton-Spruce Ave,Washington Department of Ecology,47.592675,-122.627397,US,WA,0.9761986301369863,122,80.0
+80,530330080,Seattle-Beacon Hill,Washington Department of Ecology,47.568236,-122.308628,US,WA,0.9061643835616439,593,102.0
+81,530330057,Seattle-Duwamish,Washington Department of Ecology,47.559975,-122.338265,US,WA,0.9625,134,4.0
+82,530331011,Seattle-South Park,Washington Department of Ecology,47.5297,-122.3203,US,WA,0.9821917808219178,218,6.0
+83,840530330069,Tukwila_Allentown,Washington Department of Ecology,47.498535,-122.278385,US,WA,0.9781392694063927,97,7.0
+84,530330017,North Bend-North Bend Way (SO),Washington Department of Ecology,47.4902,-121.772697,US,WA,0.9768264840182649,189,139.0
+85,530070011,Wenatchee-Fifth St,Washington Department of Ecology,47.43061,-120.34195,US,WA,0.9933789954337899,87,248.0
+86,840530250003,Soap Lake,Washington Department of Ecology,47.385564,-119.489855,US,WA,0.970662100456621,148,340.0
+87,840530330047,Auburn 29th St,Washington Department of Ecology,47.2814,-122.2233,US,WA,0.9875570776255708,85,34.0
+88,530251003,Quincy 3rd,Washington Department of Ecology,47.24126,-119.84595,US,WA,0.9878424657534246,55,399.0
+89,530750006,Rosalia-S Josephine Ave,Washington Department of Ecology,47.231182,-117.369134,US,WA,0.990582191780822,89,685.0
+90,530530024,Tacoma-S 36th St,Washington Department of Ecology,47.22634,-122.46256,US,WA,0.9385844748858447,474,104.0
+91,530450007,Shelton-W Franklin,Washington Department of Ecology,47.213551,-123.100807,US,WA,0.9940639269406393,73,6.0
+92,530530029,Tacoma-L St,Washington Department of Ecology,47.1864,-122.4517,US,WA,0.954851598173516,410,103.0
+93,530251002,Moses Lake-Balsam St,Washington Department of Ecology,47.1303,-119.2737,US,WA,0.9674086757990867,238,326.0
+94,530010003,Ritzville-W Alder Ave,Washington Department of Ecology,47.128081,-118.381868,US,WA,0.9752283105022831,340,550.0
+95,530670013,Lacey-College St,Washington Department of Ecology,47.029301,-122.821503,US,WA,0.9728310502283105,148,64.0
+96,530370002,Ellensburg-Ruby St,Washington Department of Ecology,46.9936,-120.545,US,WA,0.9747716894977169,145,469.0
+97,530272002,Aberdeen-Division St,Washington Department of Ecology,46.9772,-123.8317,US,WA,0.9968036529680365,2,10.0
+98,530750005,Lacrosse-Hill St,Washington Department of Ecology,46.8153,-117.8739,US,WA,0.8649543378995433,1485,463.0
+99,530750003,Pullman-SE Dexter St,Washington Department of Ecology,46.724583,-117.180379,US,WA,0.9993721461187215,1,769.0
+100,840530490003,Raymond-4th St,Washington Department of Ecology,46.68822,-123.73176,US,WA,0.992351598173516,68,3.0
+101,530410004,Chehalis-Market Blvd,Washington Department of Ecology,46.664089,-122.967323,US,WA,0.9376712328767123,725,68.0
+102,530770009,Yakima-4th Ave,Washington Department of Ecology,46.594952,-120.512283,US,WA,0.9780251141552512,125,327.0
+103,530210002,Mesa-Pepoit Way (temp SO),Washington Department of Ecology,46.5754,-119.0021,US,WA,0.9832191780821918,141,217.0
+104,840530230001,Pomeroy-Pataha St,Washington Department of Ecology,46.474438,-117.614764,US,WA,0.9719748858447489,155,551.0
+105,530030004,Clarkston-13th St,Washington Department of Ecology,46.425598,-117.059799,US,WA,0.9425228310502283,684,231.0
+106,530770015,Toppenish-Yakama Tribe,Washington Department of Ecology,46.380199,-120.332603,US,WA,0.9852739726027397,121,233.0
+107,530770005,Sunnyside-S 16th,Washington Department of Ecology,46.32033,-119.9981,US,WA,0.9634132420091325,233,226.0
+108,530130002,Dayton-W Main,Washington Department of Ecology,46.318,-117.985,US,WA,0.9992579908675799,3,487.0
+109,530050002,Kennewick-Metaline,Washington Department of Ecology,46.2183,-119.2015,US,WA,0.9327054794520548,409,156.0
+110,840530050004,Prosser-Highland Dr,Washington Department of Ecology,46.2089,-119.75267,US,WA,0.968892694063927,197,221.0
+111,530150015,Longview-30th Ave,Washington Department of Ecology,46.1394,-122.9619,US,WA,0.9844748858447488,238,3.0
+112,530710005,Walla Walla-12th St,Washington Department of Ecology,46.0588,-118.3514,US,WA,0.9901826484018265,110,276.0
+113,530110022,Yacolt-Yacolt Rd,Washington Department of Ecology,45.867894,-122.411926,US,WA,0.9962328767123287,25,215.0
+114,530110024,Vancouver-NE 84th Ave,Washington Department of Ecology,45.64336,-122.58737,US,WA,0.977054794520548,143,64.0
