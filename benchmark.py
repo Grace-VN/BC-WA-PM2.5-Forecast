@@ -214,6 +214,8 @@ def main():
     ap.add_argument("--keep_raw", action="store_true",
                     help="keep each repeat's predict/label arrays and model.pth in RESULTS_DIR")
     ap.add_argument("--summary", action="store_true", help="only merge and summarise existing results")
+    ap.add_argument("--max_hours", type=float, default=None,
+                    help="don't START a new run after this many hours (e.g. 9 on Kaggle's 12 h limit)")
     args = ap.parse_args()
     models = args.models or (GROUPS[args.group] if args.group else DEFAULT_MODELS)
 
@@ -233,11 +235,19 @@ def main():
             for f in glob.glob(os.path.join(METRICS, "scores", f"{m}__rep*.csv")):
                 os.remove(f)
     failed = []
+    t_begin, out_of_time = time.time(), False
 
     for m in models:
+        if out_of_time:
+            break
         for k in range(args.repeats):
             if os.path.exists(score_fp(m, k)):
                 continue
+            if args.max_hours and (time.time() - t_begin) / 3600 > args.max_hours:
+                print(f"time budget of {args.max_hours} h used - stopping here; "
+                      f"run again to continue from {m} repeat {k + 1}", flush=True)
+                out_of_time = True
+                break
             t_start = time.time()
             print(f"== {m} repeat {k + 1}/{args.repeats} (seed {k})", flush=True)
             try:

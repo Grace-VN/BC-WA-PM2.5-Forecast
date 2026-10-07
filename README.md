@@ -86,6 +86,8 @@ python benchmark.py --summary        # merge all groups' results and summarise
 
 Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each run's metric file, the config used and the training log; `RESULTS_DIR` (default `results/`) gets the large prediction arrays and checkpoints.
 
+**Kaggle:** import [`kaggle.ipynb`](kaggle.ipynb) (File → Import Notebook → GitHub), set GPU T4 x2 and Internet on, pick `GROUP`, then *Save Version → Save & Run All* — it runs in the background and keeps the metrics as the version's output; attach earlier versions' output to resume or combine groups.
+
 **Google Colab:** open [`colab.ipynb`](https://colab.research.google.com/github/Grace-VN/BC-WA-PM2.5-Forecast/blob/main/colab.ipynb), switch to a GPU runtime and run the cells. Metrics are written to Google Drive.
 
 **Benchmark models** (`benchmark.py` default):
