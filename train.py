@@ -29,6 +29,9 @@ from model.wpmixer import WPMixerPM25
 from model.dtaf import DTAFPM25
 from model.agcrn import AGCRNPM25
 from model.megacrn import MegaCRNPM25
+from model.transformer import TransformerPM25
+from model.tcn_dir import TCNDIR
+from model.stmamba import STMambaPM25
 
 import arrow
 import torch
@@ -70,6 +73,8 @@ MODEL_CATALOG = {
     'AirFormer': (18, 2023),
     'AirLapse': (19, 2026),
     'AirLapseV2': (20, 2026),
+    # added for the BC-WA benchmark (unnumbered, so the list above keeps its order)
+    'Transformer': (None, 2017), 'TCN_DIR': (None, 2026), 'STMamba': (None, 2025),
 }
 
 
@@ -600,6 +605,39 @@ def get_model():
             ode_latent_dim=config['experiments'].get('airlapsev2_ode_latent_dim', 8),
             ode_reaction_term=config['experiments'].get('airlapsev2_ode_reaction_term', False),
         )
+    elif exp_model == 'Transformer':
+        return TransformerPM25(
+            hist_len, pred_len, in_dim, city_num, batch_size, device,
+            d_model=config['experiments'].get('transformer_d_model', 64),
+            n_heads=config['experiments'].get('transformer_n_heads', 4),
+            e_layers=config['experiments'].get('transformer_e_layers', 2),
+            d_layers=config['experiments'].get('transformer_d_layers', 1),
+            d_ff=config['experiments'].get('transformer_d_ff', 256),
+            dropout=config['experiments'].get('transformer_dropout', 0.1),
+        )
+    elif exp_model == 'TCN_DIR':
+        # Needs the training PM2.5 distribution for its LDS loss weights.
+        return TCNDIR(
+            hist_len, pred_len, in_dim, city_num, batch_size, device,
+            train_pm25=train_data.pm25, pm25_mean=pm25_mean, pm25_std=pm25_std,
+            lds=config['experiments'].get('tcn_dir_lds', True),
+            num_bins=config['experiments'].get('tcn_dir_num_bins', 501),
+            sigma=config['experiments'].get('tcn_dir_sigma', 1.0),
+            dropout=config['experiments'].get('tcn_dir_dropout', 0.2),
+        )
+    elif exp_model == 'STMamba':
+        # Needs the training PM2.5 series to rank correlated stations.
+        return STMambaPM25(
+            hist_len, pred_len, in_dim, city_num, batch_size, device,
+            train_pm25=train_data.pm25,
+            k_stations=config['experiments'].get('stmamba_k_stations', 8),
+            fusion_hidden=config['experiments'].get('stmamba_fusion_hidden', 64),
+            d_model=config['experiments'].get('stmamba_d_model', 32),
+            d_state=config['experiments'].get('stmamba_d_state', 16),
+            d_conv=config['experiments'].get('stmamba_d_conv', 4),
+            expand=config['experiments'].get('stmamba_expand', 2),
+            n_layers=config['experiments'].get('stmamba_n_layers', 1),
+        )
     else:
         raise Exception('Wrong model name!')
 
@@ -615,7 +653,12 @@ def train(train_loader, model, optimizer):
         pm25_label = pm25[:, hist_len:]
         pm25_hist = pm25[:, :hist_len]
         pm25_pred = model(pm25_hist, feature)
-        loss = criterion(pm25_pred, pm25_label)
+        # A model may define its own TRAINING loss (e.g. TCN_DIR's LDS-weighted
+        # MSE); val()/test() always use the plain criterion.
+        if hasattr(model, 'weighted_loss'):
+            loss = model.weighted_loss(pm25_pred, pm25_label)
+        else:
+            loss = criterion(pm25_pred, pm25_label)
         # Optional auxiliary regularization terms (VAE-style KL / dual-branch
         # alignment). val()/test() deliberately do NOT include these - the
         # validation loss is used for early stopping / best-model selection

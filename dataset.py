@@ -73,13 +73,25 @@ class HazeData(data.Dataset):
 
         self.graph = graph
 
+        # Normalisation statistics come from the TRAINING period for every
+        # split (the original PM2.5-GNN code computed them per split, so the
+        # val/test sets were scaled with their own mean/std - a leak of
+        # test-period information and a train/test scale mismatch). Feature
+        # processing is row-wise, so it runs on the full array first; the
+        # split is cut out after the statistics are taken.
+        self.train_start = self._get_time(ds_cfg['train_start'])
+        self.train_end = self._get_time(ds_cfg['train_end'])
         self._load_npy()
         self._gen_time_arr()
-        self._process_time()
+        # _gen_time_arr's interval runs one step past data_end; slicing used
+        # to hide that, but _process_feature now sees the full arrays.
+        self.time_arrow = self.time_arrow[:len(self.pm25)]
+        self.time_arr = self.time_arr[:len(self.pm25)]
         self._process_feature()
         self.feature = np.float32(self.feature)
         self.pm25 = np.float32(self.pm25)
         self._calc_mean_std()
+        self._process_time()
         seq_len = hist_len + pred_len
         self._add_time_dim(seq_len)
         self._norm()
@@ -105,12 +117,14 @@ class HazeData(data.Dataset):
         self.time_arr = _add_t(self.time_arr, seq_len)
 
     def _calc_mean_std(self):
-        self.feature_mean = self.feature.mean(axis=(0,1))
-        self.feature_std = self.feature.std(axis=(0,1))
+        ts, te = self._get_idx(self.train_start), self._get_idx(self.train_end) + 1
+        feature, pm25 = self.feature[ts:te], self.pm25[ts:te]
+        self.feature_mean = feature.mean(axis=(0,1))
+        self.feature_std = feature.std(axis=(0,1))
         self.wind_mean = self.feature_mean[-2:]
         self.wind_std = self.feature_std[-2:]
-        self.pm25_mean = self.pm25.mean()
-        self.pm25_std = self.pm25.std()
+        self.pm25_mean = pm25.mean()
+        self.pm25_std = pm25.std()
 
     def _process_feature(self):
         if self.family == 'sensor':

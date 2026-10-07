@@ -9,9 +9,9 @@ experiments:
   # (markedly slower per epoch; not yet shown to help on this dataset).
   airlapsev2_ode_transport: false
 # Models (set `model:` above to one of these names):
-#   generic:          MLP, LSTM, GRU, AGCRN, MegaCRN
-#   transformers:     Informer, Autoformer, PatchTST, STAEformer, MGSFformer,
-#                     TimeXer, WPMixer, DTAF
+#   generic:          MLP, LSTM, GRU, AGCRN, MegaCRN, TCN_DIR, STMamba
+#   transformers:     Transformer, Informer, Autoformer, PatchTST, STAEformer,
+#                     MGSFformer, TimeXer, WPMixer, DTAF
 #   air-quality:      PM25_GNN (+ PM25_GNN_nosub, GC_LSTM, nodesFC_GRU),
 #                     AirDDE, AirPhyNet, AirDualODE, AirFormer
 #   proposed:         AirLapse, AirLapseV2

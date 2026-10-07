@@ -77,7 +77,7 @@ python build_dataset.py --start 2023-10-01 --end 2026-09-30 --tag BCWA_AirNow_3y
 ```bash
 pip install -r requirements.txt
 python train.py                     # one model, as set in config.yaml (experiments.model)
-python benchmark.py --models AirLapseV2 LSTM GRU PM25_GNN Informer PatchTST --repeats 3
+python benchmark.py --repeats 3      # the 11 benchmark models below
 ```
 
 `benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline.
@@ -86,7 +86,25 @@ Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each ru
 
 **Google Colab:** open [`colab.ipynb`](https://colab.research.google.com/github/Grace-VN/BC-WA-PM2.5-Forecast/blob/main/colab.ipynb), switch to a GPU runtime and run the cells. Metrics are written to Google Drive.
 
-**Models** (`model/`): MLP, LSTM, GRU, AGCRN, MegaCRN, Informer, Autoformer, PatchTST, STAEformer, MGSFformer, TimeXer, WPMixer, DTAF, PM25_GNN (+ variants), AirDDE, AirPhyNet, AirDualODE, AirFormer, AirLapse, AirLapseV2.
+**Benchmark models** (`benchmark.py` default):
+
+| Group | Model | Reference |
+|---|---|---|
+| Proposed | AirLapseV2 | this work |
+| Recurrent / attention | LSTM | Hochreiter & Schmidhuber, 1997 |
+| | Transformer | Vaswani et al., 2017 |
+| | Informer | Zhou et al., AAAI 2021 |
+| Air-quality graph / physics | PM25_GNN | Wang et al., SIGSPATIAL 2020 |
+| | AirFormer | Liang et al., AAAI 2023 |
+| | AirPhyNet | Hettige et al., ICLR 2024 |
+| | AirDualODE | Air-DualODE, ICLR 2025 |
+| | AirDDE | AirDDE, AAAI ([code](https://github.com/w2obin/airdde-aaai)) |
+| Recent PM2.5 models (re-implemented) | TCN_DIR — multi-scale TCN + label-distribution-smoothed loss | Seo et al., 2026 |
+| | STMamba — correlated-station fusion + Mamba | Zhang et al., 2025 |
+
+TCN_DIR and STMamba are re-implementations from the papers and their public code, adapted to this setting (24 h → 24 h for all stations); each model file's docstring lists exactly what was kept and changed. Other models available in `model/`: MLP, GRU, AGCRN, MegaCRN, Autoformer, PatchTST, STAEformer, MGSFformer, TimeXer, WPMixer, DTAF, AirLapse and PM25_GNN variants.
+
+**Normalisation:** all splits are standardised with training-period statistics (the original PM2.5-GNN code standardised each split with its own mean/std, which leaks test-period information).
 
 ## Data sources and licences
 

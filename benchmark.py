@@ -51,7 +51,12 @@ RESULTS = os.environ.get("RESULTS_DIR", os.path.join(REPO, "results"))
 METRICS = os.environ.get("METRICS_DIR", os.path.join(RESULTS, "metrics"))
 THRESHOLDS = (35.5, 55.5)
 MAPE_MIN = 1.0      # ug/m3, same mask as train.py's get_mape
-DEFAULT_MODELS = ["AirLapseV2", "LSTM", "GRU", "PM25_GNN", "Informer", "PatchTST"]
+DEFAULT_MODELS = [
+    "AirLapseV2",                                         # proposed
+    "LSTM", "Transformer", "Informer",                    # recurrent / attention
+    "PM25_GNN", "AirFormer", "AirPhyNet", "AirDualODE", "AirDDE",   # air-quality graph / physics
+    "TCN_DIR", "STMamba",                                 # 2025-26 PM2.5 models (re-implemented)
+]
 
 
 def observed_mask(cfg):
