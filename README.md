@@ -77,10 +77,10 @@ python build_dataset.py --start 2023-10-01 --end 2026-09-30 --tag BCWA_AirNow_3y
 ```bash
 pip install -r requirements.txt
 python train.py                     # one model, as set in config.yaml (experiments.model)
-python benchmark.py --repeats 3      # the 11 benchmark models below
+python benchmark.py                  # the 15 benchmark models below, 5 runs each
 ```
 
-`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline.
+`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `benchmark.csv`).
 
 Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each run's metric file, the config used and the training log; `RESULTS_DIR` (default `results/`) gets the large prediction arrays and checkpoints.
 
@@ -91,9 +91,13 @@ Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each ru
 | Group | Model | Reference |
 |---|---|---|
 | Proposed | AirLapseV2 | this work |
-| Recurrent / attention | LSTM | Hochreiter & Schmidhuber, 1997 |
-| | Transformer | Vaswani et al., 2017 |
+| Neural networks | MLP | Rumelhart et al., 1986 |
+| | LSTM | Hochreiter & Schmidhuber, 1997 |
+| | GRU | Cho et al., 2014 |
+| Transformers | Transformer | Vaswani et al., 2017 |
 | | Informer | Zhou et al., AAAI 2021 |
+| | Autoformer | Wu et al., NeurIPS 2021 |
+| | Crossformer | Zhang & Yan, ICLR 2023 |
 | Air-quality graph / physics | PM25_GNN | Wang et al., SIGSPATIAL 2020 |
 | | AirFormer | Liang et al., AAAI 2023 |
 | | AirPhyNet | Hettige et al., ICLR 2024 |
@@ -102,7 +106,7 @@ Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each ru
 | Recent PM2.5 models (re-implemented) | TCN_DIR — multi-scale TCN + label-distribution-smoothed loss | Seo et al., 2026 |
 | | STMamba — correlated-station fusion + Mamba | Zhang et al., 2025 |
 
-TCN_DIR and STMamba are re-implementations from the papers and their public code, adapted to this setting (24 h → 24 h for all stations); each model file's docstring lists exactly what was kept and changed. Other models available in `model/`: MLP, GRU, AGCRN, MegaCRN, Autoformer, PatchTST, STAEformer, MGSFformer, TimeXer, WPMixer, DTAF, AirLapse and PM25_GNN variants.
+TCN_DIR and STMamba are re-implementations from the papers and their public code, and Crossformer is a port of its official code, all adapted to this setting (24 h → 24 h for all stations; in Crossformer the stations are its "dimensions"); each model file's docstring lists exactly what was kept and changed. Other models available in `model/`: AGCRN, MegaCRN, PatchTST, STAEformer, MGSFformer, TimeXer, WPMixer, DTAF, AirLapse and PM25_GNN variants.
 
 **Normalisation:** all splits are standardised with training-period statistics (the original PM2.5-GNN code standardised each split with its own mean/std, which leaks test-period information).
 

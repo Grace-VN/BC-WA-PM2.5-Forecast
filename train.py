@@ -32,8 +32,10 @@ from model.megacrn import MegaCRNPM25
 from model.transformer import TransformerPM25
 from model.tcn_dir import TCNDIR
 from model.stmamba import STMambaPM25
+from model.crossformer import CrossformerPM25
 
 import arrow
+import random
 import torch
 from torch import nn
 import numpy as np
@@ -75,6 +77,7 @@ MODEL_CATALOG = {
     'AirLapseV2': (20, 2026),
     # added for the BC-WA benchmark (unnumbered, so the list above keeps its order)
     'Transformer': (None, 2017), 'TCN_DIR': (None, 2026), 'STMamba': (None, 2025),
+    'Crossformer': (None, 2023),
 }
 
 
@@ -638,6 +641,18 @@ def get_model():
             expand=config['experiments'].get('stmamba_expand', 2),
             n_layers=config['experiments'].get('stmamba_n_layers', 1),
         )
+    elif exp_model == 'Crossformer':
+        return CrossformerPM25(
+            hist_len, pred_len, in_dim, city_num, batch_size, device,
+            seg_len=config['experiments'].get('crossformer_seg_len', 6),
+            win_size=config['experiments'].get('crossformer_win_size', 2),
+            factor=config['experiments'].get('crossformer_factor', 5),
+            d_model=config['experiments'].get('crossformer_d_model', 64),
+            d_ff=config['experiments'].get('crossformer_d_ff', 128),
+            n_heads=config['experiments'].get('crossformer_n_heads', 4),
+            e_layers=config['experiments'].get('crossformer_e_layers', 3),
+            dropout=config['experiments'].get('crossformer_dropout', 0.2),
+        )
     else:
         raise Exception('Wrong model name!')
 
@@ -804,6 +819,14 @@ def main():
     param_count_list, epoch_time_list, inference_time_list, peak_memory_list = [], [], [], []
 
     for exp_idx in range(exp_repeat):
+        # Repeat k uses seed SEED + k (env SEED, default 0), so every repeat is
+        # reproducible up to GPU non-determinism; benchmark.py runs repeat k as
+        # its own process with SEED=k.
+        seed = int(os.environ.get('SEED', 0)) + exp_idx
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
         train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
         val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False, drop_last=True)
         test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False, drop_last=True)
