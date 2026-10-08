@@ -78,15 +78,15 @@ python build_dataset.py --start 2023-10-01 --end 2026-09-30 --tag BCWA_AirNow_3y
 pip install -r requirements.txt
 python train.py                     # one model, as set in config.yaml (experiments.model)
 python benchmark.py                  # the 15 benchmark models below, 5 runs each
-python benchmark.py --group 2        # or one of 4 equal-time groups per session
+python benchmark.py --group 2        # or one of 5 model groups per session
 python benchmark.py --summary        # merge all groups' results and summarise
 ```
 
-`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `scores/` and merged in `benchmark.csv`). Every run writes its own score file, so the four model groups (`--group 1..4`) can run in separate sessions, sequentially or at the same time.
+`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `scores/` and merged in `benchmark.csv`). Every run writes its own score file, so the five model groups (`--group 1..5`) can run in separate sessions, sequentially or at the same time.
 
 Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each run's metric file, the config used and the training log; `RESULTS_DIR` (default `results/`) gets the large prediction arrays and checkpoints.
 
-**Kaggle:** import [`kaggle.ipynb`](kaggle.ipynb) (File → Import Notebook → GitHub), set GPU T4 x2 and Internet on, pick `GROUP`, then *Save Version → Save & Run All* — it runs in the background and keeps the metrics as the version's output; attach earlier versions' output to resume or combine groups.
+**Kaggle:** import [`kaggle.ipynb`](kaggle.ipynb) (File → Import Notebook → GitHub), set GPU T4 x2 and Internet on, pick `GROUP` and enter your remaining GPU hours (training gets a hard deadline inside that quota, using both T4s), then *Save Version → Save & Run All* — it runs in the background and keeps the metrics as the version's output; attach earlier versions' output to resume or combine groups.
 
 **Google Colab:** open [`colab.ipynb`](https://colab.research.google.com/github/Grace-VN/BC-WA-PM2.5-Forecast/blob/main/colab.ipynb), switch to a GPU runtime and run the cells. Metrics are written to Google Drive.
 
