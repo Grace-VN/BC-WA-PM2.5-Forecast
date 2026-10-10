@@ -25,7 +25,7 @@ resumes at the repeat it stopped in; --rerun deletes a model's earlier
 files first. One model failing doesn't stop the rest.
 
 Because every run has its own file, the benchmark can be split into groups
-(--group 1..5, or any --models list) run in separate sessions - one after
+(--group 1..6, or any --models list) run in separate sessions - one after
 another or at the same time (e.g. several Colab runtimes writing to the same
 Drive folder) - as long as two sessions don't train the same model at once.
 After each run, all score files are merged into <metrics>/benchmark.csv and
@@ -44,10 +44,11 @@ Two output locations:
       set) and model.pth. Only needed to compute the scores above; on Colab
       leave it on the runtime's local disk.
 
-Usage: python benchmark.py [--group 1..5 | --models AirLapseV2 GRU ...]
+Usage: python benchmark.py [--group 1..6 | --models AirLapseV2 GRU ...]
                            [--epochs 50] [--repeats 5] [--early_stop 10]
                            [--rerun] [--keep_raw] [--summary]
                            [--max_hours H] [--deadline_hours H] [--gpu I] [--repeat_ids K ...]
+                           [--overrides tuned.yaml --label NAME]
 """
 import argparse
 import glob
@@ -77,8 +78,8 @@ DEFAULT_MODELS = [
 # (~3.3 h per run on a Kaggle T4 - its ODE solver gains little from a GPU)
 # and AirDDE (also ODE-based, expected to be slower still) each get their own.
 GROUPS = {
-    1: ["MLP", "GRU", "LSTM", "PM25_GNN", "AirLapseV2", "Crossformer",
-        "Transformer", "AirDualODE"],
+    1: ["AirLapseV2"],                  # tuned for this dataset: see tune_airlapse_v2.py / --overrides
+    6: ["MLP", "GRU", "LSTM", "PM25_GNN", "Crossformer", "Transformer", "AirDualODE"],
     2: ["STMamba", "Informer", "AirFormer"],
     3: ["TCN_DIR", "Autoformer"],
     4: ["AirDDE"],
@@ -125,25 +126,29 @@ def scores(pred, label, mask=None):
     return out
 
 
-def train(model, repeat, args, base_cfg, timeout=None):
+def train(model, repeat, args, base_cfg, timeout=None, name=None):
     """One repeat (seed = repeat) of one model; returns the run's repeat directory.
+    `name` (default: the model) labels its outputs - e.g. a tuned variant.
     Raises subprocess.TimeoutExpired (after killing train.py) if it runs past timeout s."""
+    name = name or model
     cfg = yaml.safe_load(yaml.safe_dump(base_cfg))
+    for section in ("experiments", "train"):                  # --overrides (e.g. tuned hyperparameters)
+        cfg[section].update(args.override_cfg.get(section, {}))
     cfg["experiments"].update(model=model, save_npy=True)
     cfg["train"].update(epochs=args.epochs, exp_repeat=1, early_stop=args.early_stop)
-    cfg_fp = os.path.join(METRICS, "configs", f"config_{model}_rep{repeat}.yaml")
+    cfg_fp = os.path.join(METRICS, "configs", f"config_{name}_rep{repeat}.yaml")
     os.makedirs(os.path.dirname(cfg_fp), exist_ok=True)
     yaml.safe_dump(cfg, open(cfg_fp, "w"), sort_keys=False)
     # each run gets its own output root: train.py names its folder by the
     # second it starts, so two streams starting together would collide
-    run_root = os.path.join(RESULTS, f"{model}_rep{repeat}")
+    run_root = os.path.join(RESULTS, f"{name}_rep{repeat}")
     shutil.rmtree(run_root, ignore_errors=True)
     env = dict(os.environ, CONFIG_FP=cfg_fp, RESULTS_DIR=run_root, SEED=str(repeat))
     if args.gpu is not None:
         env["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     r = subprocess.run([sys.executable, "train.py"], cwd=REPO, env=env, capture_output=True,
                        text=True, timeout=timeout)
-    log_fp = os.path.join(METRICS, "logs", f"{model}_rep{repeat}.log")
+    log_fp = os.path.join(METRICS, "logs", f"{name}_rep{repeat}.log")
     os.makedirs(os.path.dirname(log_fp), exist_ok=True)
     open(log_fp, "w", encoding="utf-8").write(r.stdout + "\n" + r.stderr)
     if r.returncode != 0:
@@ -151,7 +156,7 @@ def train(model, repeat, args, base_cfg, timeout=None):
         raise RuntimeError(f"{model} failed (full log: {log_fp})")
     metric_fp = r.stdout.strip().splitlines()[-1]   # train.py prints its metric file last
     run_dir = os.path.dirname(metric_fp)
-    keep = os.path.join(METRICS, "runs", model, os.path.basename(run_dir))
+    keep = os.path.join(METRICS, "runs", name, os.path.basename(run_dir))
     os.makedirs(keep, exist_ok=True)
     shutil.copy2(metric_fp, keep)
     return cfg, os.path.join(run_dir, "00")
@@ -234,8 +239,20 @@ def main():
                     help="run only these repeat indices/seeds (e.g. 0 2 4) - to split one model "
                          "over two GPUs")
     ap.add_argument("--gpu", type=int, default=None, help="GPU index for train.py (CUDA_VISIBLE_DEVICES)")
+    ap.add_argument("--overrides", default=None,
+                    help="YAML with experiments:/train: keys merged into config.yaml for these runs "
+                         "(e.g. tuning/airlapsev2_best.yaml from tune_airlapse_v2.py)")
+    ap.add_argument("--label", default=None,
+                    help="name for the results instead of the model name (one model only), "
+                         "e.g. AirLapseV2_tuned, so default and tuned runs are kept apart")
     args = ap.parse_args()
     models = args.models or (GROUPS[args.group] if args.group else DEFAULT_MODELS)
+    if args.label and len(models) != 1:
+        sys.exit("--label needs exactly one model")
+    args.override_cfg = yaml.safe_load(open(args.overrides, encoding="utf-8")) if args.overrides else {}
+    if args.overrides:
+        print(f"overrides from {args.overrides}:",
+              {k: v for k, v in args.override_cfg.items() if k in ("experiments", "train")})
 
     os.makedirs(METRICS, exist_ok=True)
     migrate_old_csv()
@@ -248,9 +265,10 @@ def main():
     print(f"models: {' '.join(models)}")
     base = yaml.safe_load(open(os.path.join(REPO, "config.yaml"), encoding="utf-8"))
     obs, t0 = observed_mask(base)
+    names = {m: (args.label or m) for m in models}
     if args.rerun:
         for m in models:
-            for f in glob.glob(os.path.join(METRICS, "scores", f"{m}__rep*.csv")):
+            for f in glob.glob(os.path.join(METRICS, "scores", f"{names[m]}__rep*.csv")):
                 os.remove(f)
     failed = []
     t_begin, out_of_time = time.time(), False
@@ -259,8 +277,9 @@ def main():
     for m in models:
         if out_of_time:
             break
+        name = names[m]
         for k in repeat_ids:
-            if os.path.exists(score_fp(m, k)):
+            if os.path.exists(score_fp(name, k)):
                 continue
             elapsed_h = (time.time() - t_begin) / 3600
             if args.max_hours and elapsed_h > args.max_hours:
@@ -277,10 +296,10 @@ def main():
                     out_of_time = True
                     break
             t_start = time.time()
-            print(f"== {m} repeat {k + 1} (seed {k})" + (f" on GPU {args.gpu}" if args.gpu is not None else ""),
+            print(f"== {name} repeat {k + 1} (seed {k})" + (f" on GPU {args.gpu}" if args.gpu is not None else ""),
                   flush=True)
             try:
-                cfg, rep = train(m, k, args, base, timeout)
+                cfg, rep = train(m, k, args, base, timeout, name)
             except subprocess.TimeoutExpired:
                 print(f"   deadline of {args.deadline_hours} h reached - {m} repeat {k + 1} stopped "
                       f"after {(time.time() - t_start) / 60:.0f} min and will be redone next time; "
@@ -289,22 +308,22 @@ def main():
                 break
             except Exception as e:
                 print(f"   FAILED: {e}", flush=True)
-                failed.append(m)
+                failed.append(name)
                 break                                   # later repeats would fail the same way
             H = cfg["train"]["hist_len"]
             pf = np.load(os.path.join(rep, "predict.npy"))
             lf = np.load(os.path.join(rep, "label.npy"))
             mask = window_mask(obs, t0, np.load(os.path.join(rep, "time.npy")), H)
-            row = dict(model=m, status="ok", repeat=k, minutes=round((time.time() - t_start) / 60, 1),
+            row = dict(model=name, status="ok", repeat=k, minutes=round((time.time() - t_start) / 60, 1),
                        **scores(pf[:, H:], lf[:, H:], mask))
-            pd.DataFrame([row]).to_csv(score_fp(m, k), index=False)
+            pd.DataFrame([row]).to_csv(score_fp(name, k), index=False)
             if not os.path.exists(score_fp("Persistence", 0)):
                 persist = np.repeat(lf[:, H - 1:H], lf.shape[1] - H, axis=1)
                 pd.DataFrame([dict(model="Persistence", status="ok", repeat=0,
                                    **scores(persist, lf[:, H:], mask))]).to_csv(
                     score_fp("Persistence", 0), index=False)
             if not args.keep_raw:                       # ~190 MB of arrays per repeat, scored already
-                shutil.rmtree(os.path.join(RESULTS, f"{m}_rep{k}"), ignore_errors=True)
+                shutil.rmtree(os.path.join(RESULTS, f"{name}_rep{k}"), ignore_errors=True)
             merge_scores()
             print(f"   done in {(time.time() - t_start) / 60:.1f} min", flush=True)
 

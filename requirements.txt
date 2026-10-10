@@ -25,3 +25,4 @@ bresenham
 psutil            # peak-memory reporting on CPU runs (GPU runs use torch.cuda's own stats)
 
 pandas
+optuna            # tune_airlapse_v2.py only

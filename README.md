@@ -78,11 +78,17 @@ python build_dataset.py --start 2023-10-01 --end 2026-09-30 --tag BCWA_AirNow_3y
 pip install -r requirements.txt
 python train.py                     # one model, as set in config.yaml (experiments.model)
 python benchmark.py                  # the 15 benchmark models below, 5 runs each
-python benchmark.py --group 2        # or one of 5 model groups per session
+python benchmark.py --group 2        # or one of 6 model groups per session
 python benchmark.py --summary        # merge all groups' results and summarise
+
+# AirLapseV2 hyperparameter search for this dataset (validation loss only), then 5 runs with the best config
+python eda_airlapse_priors.py        # dataset statistics behind the search ranges
+python tune_airlapse_v2.py --timeout_hours 4      # one worker per GPU can share the study
+python tune_airlapse_v2.py --export
+python benchmark.py --models AirLapseV2 --label AirLapseV2_tuned --overrides results/metrics/tuning/airlapsev2_best.yaml
 ```
 
-`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `scores/` and merged in `benchmark.csv`). Every run writes its own score file, so the five model groups (`--group 1..5`) can run in separate sessions, sequentially or at the same time.
+`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `scores/` and merged in `benchmark.csv`). Every run writes its own score file, so the six model groups (`--group 1..6`) can run in separate sessions, sequentially or at the same time.
 
 Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each run's metric file, the config used and the training log; `RESULTS_DIR` (default `results/`) gets the large prediction arrays and checkpoints.
 
@@ -111,6 +117,8 @@ Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each ru
 | | STMamba — correlated-station fusion + Mamba | Zhang et al., 2025 |
 
 TCN_DIR and STMamba are re-implementations from the papers and their public code, and Crossformer is a port of its official code, all adapted to this setting (24 h → 24 h for all stations; in Crossformer the stations are its "dimensions"); each model file's docstring lists exactly what was kept and changed. Other models available in `model/`: AGCRN, MegaCRN, PatchTST, STAEformer, MGSFformer, TimeXer, WPMixer, DTAF, AirLapse and PM25_GNN variants.
+
+**AirLapseV2 tuning:** AirLapseV2's defaults were set for KnowAir (3-hourly, 184 Chinese cities). `eda_airlapse_priors.py` measures the corresponding quantities on this dataset's training period (station spacing, correlation decay with distance and elevation, wind-implied travel times, lead of upwind neighbours), and `tune_airlapse_v2.py` runs an Optuna search over ranges derived from them, selecting on validation loss only. Results are reported separately as `AirLapseV2_tuned`, next to `AirLapseV2` with its KnowAir defaults; baselines use their published defaults.
 
 **Normalisation:** all splits are standardised with training-period statistics (the original PM2.5-GNN code standardised each split with its own mean/std, which leaks test-period information).
 
