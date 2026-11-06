@@ -78,7 +78,7 @@ python build_dataset.py --start 2023-10-01 --end 2026-09-30 --tag BCWA_AirNow_3y
 pip install -r requirements.txt
 python train.py                     # one model, as set in config.yaml (experiments.model)
 python benchmark.py                  # the 15 benchmark models below, 5 runs each
-python benchmark.py --group 2        # or one of 6 model groups per session
+python benchmark.py --group 2        # or one of 15 groups per session (one model each, see GROUPS in benchmark.py)
 python benchmark.py --summary        # merge all groups' results and summarise
 
 # AirLapseV2 hyperparameter search for this dataset (validation loss only), then 5 runs with the best config

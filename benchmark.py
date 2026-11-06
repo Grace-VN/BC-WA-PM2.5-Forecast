@@ -25,7 +25,7 @@ resumes at the repeat it stopped in; --rerun deletes a model's earlier
 files first. One model failing doesn't stop the rest.
 
 Because every run has its own file, the benchmark can be split into groups
-(--group 1..6, or any --models list) run in separate sessions - one after
+(--group 1..15, or any --models list) run in separate sessions - one after
 another or at the same time (e.g. several Colab runtimes writing to the same
 Drive folder) - as long as two sessions don't train the same model at once.
 After each run, all score files are merged into <metrics>/benchmark.csv and
@@ -44,7 +44,7 @@ Two output locations:
       set) and model.pth. Only needed to compute the scores above; on Colab
       leave it on the runtime's local disk.
 
-Usage: python benchmark.py [--group 1..6 | --models AirLapseV2 GRU ...]
+Usage: python benchmark.py [--group 1..15 | --models AirLapseV2 GRU ...]
                            [--epochs 50] [--repeats 5] [--early_stop 10]
                            [--rerun] [--keep_raw] [--summary]
                            [--max_hours H] [--deadline_hours H] [--gpu I] [--repeat_ids K ...]
@@ -74,16 +74,25 @@ DEFAULT_MODELS = [
     "PM25_GNN", "AirFormer", "AirPhyNet", "AirDualODE", "AirDDE",   # air-quality graph / physics
     "TCN_DIR", "STMamba",                                            # 2025-26 PM2.5 models (re-implemented)
 ]
-# Model groups for running the benchmark in separate sessions. AirPhyNet
-# (~3.3 h per run on a Kaggle T4 - its ODE solver gains little from a GPU)
-# and AirDDE (also ODE-based, expected to be slower still) each get their own.
+# One model per group, so one session trains one model --repeats times.
+# Slow models may still need several sessions: AirPhyNet takes ~3.3 h per run
+# on a Kaggle T4 (its ODE solver gains little from a GPU).
 GROUPS = {
     1: ["AirLapseV2"],                  # tuned for this dataset: see tune_airlapse_v2.py / --overrides
-    6: ["MLP", "GRU", "LSTM", "PM25_GNN", "Crossformer", "Transformer", "AirDualODE"],
-    2: ["STMamba", "Informer", "AirFormer"],
-    3: ["TCN_DIR", "Autoformer"],
+    2: ["Transformer"],
+    3: ["AirDualODE"],
     4: ["AirDDE"],
     5: ["AirPhyNet"],
+    6: ["AirFormer"],
+    7: ["MLP"],
+    8: ["GRU"],
+    9: ["LSTM"],
+    10: ["PM25_GNN"],
+    11: ["Crossformer"],
+    12: ["STMamba"],
+    13: ["Informer"],
+    14: ["TCN_DIR"],
+    15: ["Autoformer"],
 }
 assert sorted(sum(GROUPS.values(), [])) == sorted(DEFAULT_MODELS)
 
