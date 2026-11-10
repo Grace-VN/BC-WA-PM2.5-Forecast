@@ -23,6 +23,7 @@ from model.airphynet import AirPhyNetPM25
 from model.airdualode import AirDualODEPM25
 from model.airlapse import AirLapse
 from model.airlapse_v2 import AirLapseV2
+from model.airlapse_v3 import AirLapseV3
 from model.mgsfformer import MGSFformerPM25
 from model.timexer import TimeXerPM25
 from model.wpmixer import WPMixerPM25
@@ -78,6 +79,7 @@ MODEL_CATALOG = {
     # added for the BC-WA benchmark (unnumbered, so the list above keeps its order)
     'Transformer': (None, 2017), 'TCN_DIR': (None, 2026), 'STMamba': (None, 2025),
     'Crossformer': (None, 2023),
+    'AirLapseV3': (None, 2026), 'AirLapseV3_phys': (None, 2026),
 }
 
 
@@ -511,7 +513,23 @@ def get_model():
             diffusivity_km2_per_hour_init=config['experiments'].get('gru_diffusivity_km2_per_hour_init', 50.0),
             t_eps_hours=config['experiments'].get('gru_t_eps_hours', 0.25),
         )
-    elif exp_model == 'AirLapseV2':
+    elif exp_model in ('AirLapseV2', 'AirLapseV3', 'AirLapseV3_phys'):
+        # AirLapseV3 = V2's encoder (same airlapsev2_* keys, so a tuned V2
+        # overrides file applies to it too) + a Green's-function propagator
+        # decoder (airlapsev3_* keys; see model/airlapse_v3.py).
+        # AirLapseV3_phys = the propagator alone (physics-only ablation).
+        _cls, _extra = AirLapseV2, {}
+        if exp_model != 'AirLapseV2':
+            _e = config['experiments']
+            _cls, _extra = AirLapseV3, dict(
+                pm25_mean=pm25_mean, pm25_std=pm25_std,
+                physics_only=exp_model == 'AirLapseV3_phys',
+                area_init_km2=_e.get('airlapsev3_area_init_km2', None),
+                relax_tau_init_h=_e.get('airlapsev3_relax_tau_init_h', 11.6),
+                max_inflow=_e.get('airlapsev3_max_inflow', 0.9),
+                prop_diffusivity_along_init=_e.get('airlapsev3_diffusivity_along_init', 50.0),
+                prop_diffusivity_cross_init=_e.get('airlapsev3_diffusivity_cross_init', 50.0),
+            )
         # Own airlapsev2_* prefix throughout (not gru_*) even though most
         # of these mirror AirLapse V1's own defaults 1:1 - keeps a future
         # Optuna search over one from ever silently perturbing the other,
@@ -520,7 +538,7 @@ def get_model():
         # diffusivity_along_init/diffusivity_cross_init are genuinely new
         # (AdaptivePhysicsTransport2D's context-adaptive diffusivity MLP -
         # see model/airlapse_v2.py's module docstring for why).
-        return AirLapseV2(
+        return _cls(
             hist_len, pred_len, in_dim, city_num, batch_size, device,
             graph.edge_index, graph.edge_attr, wind_mean, wind_std,
             station_coords=coords,
@@ -607,6 +625,7 @@ def get_model():
             ode_transport=config['experiments'].get('airlapsev2_ode_transport', False),
             ode_latent_dim=config['experiments'].get('airlapsev2_ode_latent_dim', 8),
             ode_reaction_term=config['experiments'].get('airlapsev2_ode_reaction_term', False),
+            **_extra,
         )
     elif exp_model == 'Transformer':
         return TransformerPM25(

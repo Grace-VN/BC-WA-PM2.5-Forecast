@@ -25,7 +25,7 @@ resumes at the repeat it stopped in; --rerun deletes a model's earlier
 files first. One model failing doesn't stop the rest.
 
 Because every run has its own file, the benchmark can be split into groups
-(--group 1..15, or any --models list) run in separate sessions - one after
+(--group 1..17, or any --models list) run in separate sessions - one after
 another or at the same time (e.g. several Colab runtimes writing to the same
 Drive folder) - as long as two sessions don't train the same model at once.
 After each run, all score files are merged into <metrics>/benchmark.csv and
@@ -44,7 +44,7 @@ Two output locations:
       set) and model.pth. Only needed to compute the scores above; on Colab
       leave it on the runtime's local disk.
 
-Usage: python benchmark.py [--group 1..15 | --models AirLapseV2 GRU ...]
+Usage: python benchmark.py [--group 1..17 | --models AirLapseV2 GRU ...]
                            [--epochs 50] [--repeats 5] [--early_stop 10]
                            [--rerun] [--keep_raw] [--summary]
                            [--max_hours H] [--deadline_hours H] [--gpu I] [--repeat_ids K ...]
@@ -68,7 +68,7 @@ METRICS = os.environ.get("METRICS_DIR", os.path.join(RESULTS, "metrics"))
 THRESHOLDS = (35.5, 55.5)
 MAPE_MIN = 1.0      # ug/m3, same mask as train.py's get_mape
 DEFAULT_MODELS = [
-    "AirLapseV2",                                                    # proposed
+    "AirLapseV2", "AirLapseV3", "AirLapseV3_phys",                   # proposed (V3: Green's-function propagator decoder; _phys: physics only)
     "MLP", "LSTM", "GRU",                                            # neural networks
     "Transformer", "Informer", "Autoformer", "Crossformer",          # transformers
     "PM25_GNN", "AirFormer", "AirPhyNet", "AirDualODE", "AirDDE",   # air-quality graph / physics
@@ -93,6 +93,8 @@ GROUPS = {
     13: ["Informer"],
     14: ["TCN_DIR"],
     15: ["Autoformer"],
+    16: ["AirLapseV3"],                 # V2 encoder + Green's-function propagator decoder
+    17: ["AirLapseV3_phys"],            # propagator alone (physics-only ablation)
 }
 assert sorted(sum(GROUPS.values(), [])) == sorted(DEFAULT_MODELS)
 

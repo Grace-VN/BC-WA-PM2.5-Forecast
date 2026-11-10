@@ -77,8 +77,8 @@ python build_dataset.py --start 2023-10-01 --end 2026-09-30 --tag BCWA_AirNow_3y
 ```bash
 pip install -r requirements.txt
 python train.py                     # one model, as set in config.yaml (experiments.model)
-python benchmark.py                  # the 15 benchmark models below, 5 runs each
-python benchmark.py --group 2        # or one of 15 groups per session (one model each, see GROUPS in benchmark.py)
+python benchmark.py                  # the 17 benchmark models below, 5 runs each
+python benchmark.py --group 2        # or one of 17 groups per session (one model each, see GROUPS in benchmark.py)
 python benchmark.py --summary        # merge all groups' results and summarise
 
 # AirLapseV2 hyperparameter search for this dataset (validation loss only), then 5 runs with the best config
@@ -101,6 +101,8 @@ Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each ru
 | Group | Model | Reference |
 |---|---|---|
 | Proposed | AirLapseV2 | this work |
+| | AirLapseV3 (V2 encoder + Green's-function propagator decoder, model/airlapse_v3.py) | this work |
+| | AirLapseV3_phys (the propagator alone: physics-only ablation) | this work |
 | Neural networks | MLP | Rumelhart et al., 1986 |
 | | LSTM | Hochreiter & Schmidhuber, 1997 |
 | | GRU | Cho et al., 2014 |

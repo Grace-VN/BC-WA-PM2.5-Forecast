@@ -14,7 +14,7 @@ experiments:
 #                     MGSFformer, TimeXer, WPMixer, DTAF
 #   air-quality:      PM25_GNN (+ PM25_GNN_nosub, GC_LSTM, nodesFC_GRU),
 #                     AirDDE, AirPhyNet, AirDualODE, AirFormer
-#   proposed:         AirLapse, AirLapseV2
+#   proposed:         AirLapse, AirLapseV2, AirLapseV3, AirLapseV3_phys
 
 train:
   batch_size: 32
