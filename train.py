@@ -39,6 +39,7 @@ import arrow
 import random
 import torch
 from torch import nn
+import torch.nn.functional as F
 import numpy as np
 import pickle
 import glob
@@ -128,7 +129,29 @@ else:
 city_num = graph.node_num
 exp_repeat = config['train']['exp_repeat']
 save_npy = config['experiments']['save_npy']
-criterion = nn.MSELoss()
+criterion = nn.MSELoss()   # test loss (reported only); the scores use denormalised values
+# Training / validation (early stopping) loss. MSE targets the conditional
+# mean; on this right-skewed PM2.5 (train mean 5.8 vs median 4.1 ug/m3) that
+# lifts clean-hour forecasts - good for RMSE, bad for MAE/MAPE. 'mse_l1' adds
+# l1_weight * L1 (median-seeking) to keep most of the peak skill while pulling
+# typical hours back. train.loss (if set, e.g. via benchmark --overrides) wins
+# over loss_by_model; anything not listed trains with plain MSE.
+_loss_name = config['train'].get('loss') or config['train'].get('loss_by_model', {}).get(exp_model, 'mse')
+_l1_weight = config['train'].get('l1_weight', 0.5)
+_huber_delta = config['train'].get('huber_delta', 1.0)   # in normalised (std) units
+
+
+def train_criterion(pred, label):
+    if _loss_name == 'mse':
+        return F.mse_loss(pred, label)
+    if _loss_name == 'mse_l1':
+        return F.mse_loss(pred, label) + _l1_weight * F.l1_loss(pred, label)
+    if _loss_name == 'huber':
+        return F.huber_loss(pred, label, delta=_huber_delta)
+    raise ValueError(f"unknown train.loss '{_loss_name}' (mse | mse_l1 | huber)")
+
+
+print(f'training loss: {_loss_name}' + (f' (l1_weight {_l1_weight})' if _loss_name == 'mse_l1' else ''))
 # Weight for an optional KL-divergence regularization term. Only models
 # that expose a `last_kl_loss` attribute after forward() (AirFormer's
 # hierarchical stochastic latent module, AirPhyNet's VAE-style initial
@@ -692,7 +715,7 @@ def train(train_loader, model, optimizer):
         if hasattr(model, 'weighted_loss'):
             loss = model.weighted_loss(pm25_pred, pm25_label)
         else:
-            loss = criterion(pm25_pred, pm25_label)
+            loss = train_criterion(pm25_pred, pm25_label)
         # Optional auxiliary regularization terms (VAE-style KL / dual-branch
         # alignment). val()/test() deliberately do NOT include these - the
         # validation loss is used for early stopping / best-model selection
@@ -730,7 +753,7 @@ def val(val_loader, model):
         pm25_label = pm25[:, hist_len:]
         pm25_hist = pm25[:, :hist_len]
         pm25_pred = model(pm25_hist, feature)
-        loss = criterion(pm25_pred, pm25_label)
+        loss = train_criterion(pm25_pred, pm25_label)   # same objective as training, for early stopping
         val_loss += loss.item()
 
     val_loss /= batch_idx + 1

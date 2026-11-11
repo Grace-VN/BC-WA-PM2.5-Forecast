@@ -25,6 +25,13 @@ train:
   weight_decay: 0.0005
   early_stop: 10
   lr: 0.0005
+  # Training/validation loss: mse | mse_l1 (MSE + l1_weight * L1) | huber.
+  # Models not listed in loss_by_model use MSE. Setting `loss:` here (or in a
+  # benchmark --overrides file) applies to every model and takes precedence.
+  loss_by_model:
+    AirLapseV3: mse_l1
+    AirLapseV3_phys: mse_l1
+  l1_weight: 0.5
 
 # Results go to ./results unless RESULTS_DIR is set (see util.py).
 filepath: {}

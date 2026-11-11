@@ -86,9 +86,13 @@ python eda_airlapse_priors.py        # dataset statistics behind the search rang
 python tune_airlapse_v2.py --timeout_hours 4      # one worker per GPU can share the study
 python tune_airlapse_v2.py --export
 python benchmark.py --models AirLapseV2 --label AirLapseV2_tuned --overrides results/metrics/tuning/airlapsev2_best.yaml
+
+# AirLapseV3 trains with MSE + 0.5*L1 (train.loss_by_model in config.yaml; all other models use MSE).
+# Loss ablation, V3 with plain MSE:
+python benchmark.py --models AirLapseV3 --label AirLapseV3_mse --overrides ablations/airlapsev3_mse.yaml
 ```
 
-`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `scores/` and merged in `benchmark.csv`). Every run writes its own score file, so the six model groups (`--group 1..6`) can run in separate sessions, sequentially or at the same time.
+`benchmark.py` trains each model in turn (24 h history → 24 h ahead) and scores **only the forecast hours** and **only measured values** (`*_observed.npy`); `train.py`'s own printed metrics include the copied history hours and gap-filled values, so use the benchmark's. Metrics: RMSE, MAE, MAPE (true values ≥ 1 µg/m³), RMSE on hours > 35.5 µg/m³, and CSI / POD / FAR at the US AQI thresholds 35.5 and 55.5 µg/m³, plus a persistence baseline. Each model is trained 5 times with seeds 0–4 (one process per run, so an interrupted benchmark resumes at the run it stopped in) and reported as **mean ± std** over the runs (`benchmark_summary.csv`; per-run scores in `scores/` and merged in `benchmark.csv`). Every run writes its own score file, so the 17 model groups (`--group 1..17`) can run in separate sessions, sequentially or at the same time.
 
 Outputs: `METRICS_DIR` (default `results/metrics`) gets `benchmark.csv`, each run's metric file, the config used and the training log; `RESULTS_DIR` (default `results/`) gets the large prediction arrays and checkpoints.
 

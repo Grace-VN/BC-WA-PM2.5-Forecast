@@ -1,0 +1,4 @@
+# AirLapseV3 trained with plain MSE (the loss ablation):
+#   python benchmark.py --models AirLapseV3 --label AirLapseV3_mse --overrides ablations/airlapsev3_mse.yaml
+train:
+  loss: mse
