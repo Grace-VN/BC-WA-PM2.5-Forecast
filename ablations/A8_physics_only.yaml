@@ -1,0 +1,3 @@
+# propagator only: no encoder, no neural correction
+# python run_ablations.py --only A8_physics_only
+model: AirLapseV3_phys

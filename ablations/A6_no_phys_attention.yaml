@@ -1,0 +1,5 @@
+# content-only attention: no physics bonuses, no log-Green term
+# python run_ablations.py --only A6_no_phys_attention
+experiments:
+  airlapse_ablate:
+  - no_phys_attention

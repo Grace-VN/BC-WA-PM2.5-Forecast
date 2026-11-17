@@ -1,0 +1,4 @@
+# 2 lags in physics attention (default 4)
+# python run_ablations.py --only S_max_lag_2
+experiments:
+  airlapsev2_max_lag: 2

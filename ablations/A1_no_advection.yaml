@@ -1,0 +1,5 @@
+# Green's function without wind advection (diffusion only)
+# python run_ablations.py --only A1_no_advection
+experiments:
+  airlapse_ablate:
+  - no_advection

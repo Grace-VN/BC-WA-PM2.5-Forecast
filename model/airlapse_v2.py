@@ -102,6 +102,19 @@ from torchdiffeq import odeint_adjoint as _odeint_adjoint
 
 from model.airlapse import haversine_km, bearing_deg, _inv_softplus
 
+# Component ablations, switched on by name through `ablate` (config key
+# experiments.airlapse_ablate; see ablations/). Each removes one physical
+# ingredient from the Green's function, in the encoder's attention and, for
+# AirLapseV3, in the propagator decoder too. An empty list is the full model.
+ABLATIONS = {
+    'no_advection': 'wind speed set to 0 in the Green\'s function (diffusion only)',
+    'isotropic': 'cross-wind diffusivity tied to the along-wind one',
+    'const_diffusivity': 'diffusivity MLP sees no context: one learned value per direction',
+    'no_phys_attention': 'attention logits = query-key content only (no distance/wind/'
+                         'terrain/lag bonuses, no log-Green term)',
+    'no_relaxation': 'AirLapseV3 only: no relaxation toward the background (k = 0)',
+}
+
 
 class AdaptivePhysicsTransport2D(nn.Module):
     """
@@ -186,8 +199,10 @@ class AdaptivePhysicsTransport2D(nn.Module):
                  attn_dim=32, dist_threshold_km=300.0, sigma_d=200.0,
                  sigma_h=1200.0, sigma_tau_init_h=3.0, speed_floor_kmh=0.5,
                  diff_hidden_dim=16, diffusivity_along_init=50.0,
-                 diffusivity_cross_init=20.0, t_eps_hours=0.25):
+                 diffusivity_cross_init=20.0, t_eps_hours=0.25, ablate=()):
         super().__init__()
+        # Ablation switches (see ABLATIONS at the top of this file); empty = full model.
+        self.ablate = frozenset(ablate)
 
         self.q_proj = nn.Linear(hidden_dim, attn_dim, bias=False)
         self.k_proj = nn.Linear(hidden_dim, attn_dim, bias=False)
@@ -311,6 +326,8 @@ class AdaptivePhysicsTransport2D(nn.Module):
         context_jk = torch.stack([
             speed / 10.0, torch.sin(hour_rad), torch.cos(hour_rad), elev_km, pm25_lag,
         ], dim=-1)                                                        # [B,K,N_j,5]
+        if 'const_diffusivity' in self.ablate:                           # one learned D for all contexts
+            context_jk = torch.zeros_like(context_jk)
         # Clamped to a physically-plausible range, not just floored above
         # zero: unlike V1's single global scalar D (a slowly-moving
         # learned parameter, stable by construction), D here is the
@@ -328,8 +345,12 @@ class AdaptivePhysicsTransport2D(nn.Module):
         diff_raw = self.diff_mlp(context_jk)                              # [B,K,N_j,2]
         D_along = F.softplus(diff_raw[..., 0]).clamp(min=2.0, max=2000.0).unsqueeze(-1)  # [B,K,N_j,1]
         D_cross = F.softplus(diff_raw[..., 1]).clamp(min=2.0, max=2000.0).unsqueeze(-1)  # [B,K,N_j,1]
+        if 'isotropic' in self.ablate:                                   # no along/cross-wind distinction
+            D_cross = D_along
 
         v_signed = speed.unsqueeze(-1)                                    # [B,K,N_j,1]
+        if 'no_advection' in self.ablate:                                # diffusion only, no wind drift
+            v_signed = torch.zeros_like(v_signed)
         along_term = (x_downwind - v_signed * t_eff) ** 2 / (4.0 * D_along * t_eff)
         cross_term = y_crosswind ** 2 / (4.0 * D_cross * t_eff)
         green = (
@@ -352,12 +373,15 @@ class AdaptivePhysicsTransport2D(nn.Module):
         # its keep, exactly like w_dist/w_wind/w_terrain/w_lag.
         log_green_flat = _flatten(torch.log(green + 1e-6))
 
-        score = (content_score
-                 + self.w_dist * dist_tiled.unsqueeze(0)
-                 + self.w_wind * wind_align_flat
-                 + self.w_terrain * terrain_tiled.unsqueeze(0)
-                 + self.w_lag * lag_bias_flat
-                 + self.w_phys * log_green_flat)
+        if 'no_phys_attention' in self.ablate:                           # content (query-key) attention only
+            score = content_score
+        else:
+            score = (content_score
+                     + self.w_dist * dist_tiled.unsqueeze(0)
+                     + self.w_wind * wind_align_flat
+                     + self.w_terrain * terrain_tiled.unsqueeze(0)
+                     + self.w_lag * lag_bias_flat
+                     + self.w_phys * log_green_flat)
 
         score = score.masked_fill(~mask_tiled.unsqueeze(0), float('-inf'))
         weights = torch.nan_to_num(torch.softmax(score, dim=-1), nan=0.0)
@@ -764,8 +788,13 @@ class AirLapseV2(nn.Module):
                  ode_transport=False, ode_latent_dim=8, ode_diff_hidden_dim=16,
                  ode_diffusivity_along_init=50.0, ode_diffusivity_cross_init=20.0,
                  ode_t_eps_hours=0.25, ode_max_deriv=10.0, ode_reaction_term=False,
-                 ode_method='dopri5', ode_rtol=1e-3, ode_atol=1e-4, ode_adjoint=True):
+                 ode_method='dopri5', ode_rtol=1e-3, ode_atol=1e-4, ode_adjoint=True,
+                 ablate=()):
         super(AirLapseV2, self).__init__()
+        unknown = set(ablate) - set(ABLATIONS)
+        if unknown:
+            raise ValueError(f"unknown ablation(s) {sorted(unknown)}; choose from {list(ABLATIONS)}")
+        self.ablate = frozenset(ablate)
         assert spatial_mix_mode in ('bottleneck', 'per_step'), \
             f"spatial_mix_mode must be 'bottleneck' or 'per_step', got {spatial_mix_mode}"
         if spatial_mix_mode == 'per_step' and num_layers != 1:
@@ -849,6 +878,7 @@ class AirLapseV2(nn.Module):
             diffusivity_along_init=diffusivity_along_init,
             diffusivity_cross_init=diffusivity_cross_init,
             t_eps_hours=t_eps_hours,
+            ablate=self.ablate,
         )
         # +1: the explicit scalar transport estimate, concatenated alongside
         # h_grid and the learned attention context.

@@ -1,0 +1,5 @@
+# constant diffusivity: no wind/hour/terrain/PM2.5 context
+# python run_ablations.py --only A3_const_diffusivity
+experiments:
+  airlapse_ablate:
+  - const_diffusivity

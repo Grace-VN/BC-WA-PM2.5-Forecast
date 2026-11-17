@@ -1,0 +1,4 @@
+# loss MSE + 1.0 * L1 (default 0.5; 0 = MSE, see A9)
+# python run_ablations.py --only S_l1_weight_1.0
+train:
+  l1_weight: 1.0

@@ -1,0 +1,4 @@
+# input window 72 h (default 24)
+# python run_ablations.py --only S_hist_len_72
+train:
+  hist_len: 72

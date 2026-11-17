@@ -1,0 +1,5 @@
+# propagator without relaxation toward the background
+# python run_ablations.py --only A4_no_relaxation
+experiments:
+  airlapse_ablate:
+  - no_relaxation

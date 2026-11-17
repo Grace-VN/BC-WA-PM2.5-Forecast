@@ -1,0 +1,4 @@
+# plain MSE loss instead of the full model's MSE + 0.5 * L1
+# python run_ablations.py --only A9_mse_loss
+train:
+  loss: mse

@@ -1,0 +1,5 @@
+# plain GRU decoder instead of the Green's-function propagator (same loss as the full model)
+# python run_ablations.py --only A5_no_propagator
+model: AirLapseV2
+train:
+  loss: mse_l1

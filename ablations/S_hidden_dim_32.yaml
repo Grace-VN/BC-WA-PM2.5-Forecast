@@ -1,0 +1,4 @@
+# hidden size 32 (default 64)
+# python run_ablations.py --only S_hidden_dim_32
+experiments:
+  airlapsev2_hidden_dim: 32

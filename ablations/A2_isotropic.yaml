@@ -1,0 +1,5 @@
+# isotropic diffusion: cross-wind diffusivity = along-wind
+# python run_ablations.py --only A2_isotropic
+experiments:
+  airlapse_ablate:
+  - isotropic

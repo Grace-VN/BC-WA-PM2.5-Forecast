@@ -1,0 +1,4 @@
+# no joint spatio-temporal encoder (stations encoded independently)
+# python run_ablations.py --only A7_no_st_encoder
+experiments:
+  airlapsev2_st_encoder_layers: 0

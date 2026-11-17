@@ -1,0 +1,4 @@
+# neighbour radius 250 km (default 375)
+# python run_ablations.py --only S_dist_threshold_250
+experiments:
+  airlapsev2_dist_threshold_km: 250.0

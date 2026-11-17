@@ -542,6 +542,7 @@ def get_model():
         # decoder (airlapsev3_* keys; see model/airlapse_v3.py).
         # AirLapseV3_phys = the propagator alone (physics-only ablation).
         _cls, _extra = AirLapseV2, {}
+        print(f"{exp_model} ablations: {config['experiments'].get('airlapse_ablate') or 'none (full model)'}")
         if exp_model != 'AirLapseV2':
             _e = config['experiments']
             _cls, _extra = AirLapseV3, dict(
@@ -648,6 +649,8 @@ def get_model():
             ode_transport=config['experiments'].get('airlapsev2_ode_transport', False),
             ode_latent_dim=config['experiments'].get('airlapsev2_ode_latent_dim', 8),
             ode_reaction_term=config['experiments'].get('airlapsev2_ode_reaction_term', False),
+            # component ablations (names in model/airlapse_v2.py ABLATIONS); [] = full model
+            ablate=config['experiments'].get('airlapse_ablate', []) or [],
             **_extra,
         )
     elif exp_model == 'Transformer':

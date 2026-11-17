@@ -126,6 +126,25 @@ TCN_DIR and STMamba are re-implementations from the papers and their public code
 
 **AirLapseV2 tuning:** AirLapseV2's defaults were set for KnowAir (3-hourly, 184 Chinese cities). `eda_airlapse_priors.py` measures the corresponding quantities on this dataset's training period (station spacing, correlation decay with distance and elevation, wind-implied travel times, lead of upwind neighbours), and `tune_airlapse_v2.py` runs an Optuna search over ranges derived from them, selecting on validation loss only. Results are reported separately as `AirLapseV2_tuned`, next to `AirLapseV2` with its KnowAir defaults; baselines use their published defaults.
 
+**Ablation study (AirLapseV3):** each file in `ablations/` is one scenario, trained once with seed 0 and compared with the full model's seed-0 run (`python run_ablations.py`, or Kaggle group 18; `python run_ablations.py --summary` writes `ablation_summary.csv`). Component ablations remove one ingredient at a time through the `airlapse_ablate` switch (`model/airlapse_v2.py`, `ABLATIONS`) or a module option; sensitivity scenarios move one hyperparameter away from its default.
+
+| Scenario | Change from the full model |
+|---|---|
+| A1_no_advection | wind speed set to 0 in the Green's function (diffusion only) |
+| A2_isotropic | cross-wind diffusivity tied to the along-wind one |
+| A3_const_diffusivity | diffusivity no longer depends on wind, hour, elevation or PM2.5 |
+| A4_no_relaxation | propagator without relaxation toward the background |
+| A5_no_propagator | plain GRU decoder (AirLapseV2), same MSE + 0.5·L1 loss |
+| A6_no_phys_attention | attention from query–key content only (no physics bonuses, no log-Green term) |
+| A7_no_st_encoder | no joint spatio-temporal encoder |
+| A8_physics_only | propagator alone (no encoder, no neural correction) |
+| A9_mse_loss | plain MSE loss |
+| S_hist_len_{12,48,72} | input window (default 24 h) |
+| S_max_lag_{1,2,8} | lags in the physics attention (default 4) |
+| S_dist_threshold_{150,250,500} | neighbour radius in km (default 375) |
+| S_hidden_dim_{32,128} | hidden size (default 64) |
+| S_l1_weight_{0.25,1.0} | L1 weight in the loss (default 0.5; 0 is A9) |
+
 **Normalisation:** all splits are standardised with training-period statistics (the original PM2.5-GNN code standardised each split with its own mean/std, which leaks test-period information).
 
 ## Data sources and licences

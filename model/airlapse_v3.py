@@ -61,8 +61,9 @@ class GreenPropagator(nn.Module):
     def __init__(self, station_coords, station_elevation, feature_dim, pm25_mean,
                  dist_threshold_km=375.0, dt_hours=1.0, diff_hidden_dim=16,
                  diffusivity_along_init=50.0, diffusivity_cross_init=50.0,
-                 area_init_km2=None, relax_tau_init_h=11.6, max_inflow=0.9):
+                 area_init_km2=None, relax_tau_init_h=11.6, max_inflow=0.9, ablate=()):
         super().__init__()
+        self.ablate = frozenset(ablate)          # see ABLATIONS in model/airlapse_v2.py
         self.dt = float(dt_hours)
         self.max_inflow = max_inflow
 
@@ -108,11 +109,15 @@ class GreenPropagator(nn.Module):
         h = hour * (2.0 * math.pi / 24.0)
         ctx = torch.stack([speed / 10.0, torch.sin(h), torch.cos(h),
                            self.elev_km.expand(B, N), c_norm], dim=-1)  # [B, src, 5]
+        if 'const_diffusivity' in self.ablate:
+            ctx = torch.zeros_like(ctx)
         D = F.softplus(self.diff_mlp(ctx)).clamp(2.0, 2000.0)           # km2/h
         D_al, D_cr = D[..., 0].unsqueeze(1), D[..., 1].unsqueeze(1)      # [B, 1, src]
+        if 'isotropic' in self.ablate:
+            D_cr = D_al
 
         t = self.dt
-        v = speed.unsqueeze(1)
+        v = torch.zeros_like(speed).unsqueeze(1) if 'no_advection' in self.ablate else speed.unsqueeze(1)
         expo = (x_down - v * t) ** 2 / (4 * D_al * t) + y_cross ** 2 / (4 * D_cr * t)
         G = torch.exp(-expo) / (4 * math.pi * t * torch.sqrt(D_al * D_cr))   # per km2
         a = self.log_area.exp() * G * self.mask
@@ -123,6 +128,8 @@ class GreenPropagator(nn.Module):
         """c: [B, N] ug/m3 -> c after one step of transport + relaxation."""
         a = self.weights(bearing, speed, hour, c_norm)
         c = (1.0 - a.sum(-1)) * c + torch.bmm(a, c.unsqueeze(-1)).squeeze(-1)
+        if 'no_relaxation' in self.ablate:
+            return c
         k = F.softplus(self.relax_mlp(feat)).squeeze(-1)                 # [B, N], 1/h
         b = F.softplus(self.raw_background)
         return b + (c - b) * torch.exp(-k * self.dt)
@@ -152,7 +159,7 @@ class AirLapseV3(AirLapseV2):
             diffusivity_along_init=prop_diffusivity_along_init,
             diffusivity_cross_init=prop_diffusivity_cross_init,
             area_init_km2=area_init_km2, relax_tau_init_h=relax_tau_init_h,
-            max_inflow=max_inflow)
+            max_inflow=max_inflow, ablate=self.ablate)
         # the decoder also sees the physics forecast for its station
         self.decoder_cell = nn.GRUCell(self.feature_dim + self.latent_dim + 1, self.hidden_dim)
         with torch.no_grad():                    # start from the physics forecast
