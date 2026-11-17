@@ -145,6 +145,8 @@ TCN_DIR and STMamba are re-implementations from the papers and their public code
 | S_hidden_dim_{32,128} | hidden size (default 64) |
 | S_l1_weight_{0.25,1.0} | L1 weight in the loss (default 0.5; 0 is A9) |
 
+**Efficiency (one GPU, one session):** `python efficiency.py` measures every benchmark model back to back on the same GPU without full training: parameters (total and actually used), model-compute time per training batch and per epoch, inference time per forecast and peak GPU memory, written to `efficiency.csv`. `python efficiency.py --plot <benchmark_summary.csv>` draws RMSE against training time. Use these numbers for the paper rather than the efficiency block of each run's metric file, which mixes GPUs and includes data loading.
+
 **Normalisation:** all splits are standardised with training-period statistics (the original PM2.5-GNN code standardised each split with its own mean/std, which leaks test-period information).
 
 ## Data sources and licences
