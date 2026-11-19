@@ -651,6 +651,9 @@ def get_model():
             ode_reaction_term=config['experiments'].get('airlapsev2_ode_reaction_term', False),
             # component ablations (names in model/airlapse_v2.py ABLATIONS); [] = full model
             ablate=config['experiments'].get('airlapse_ablate', []) or [],
+            # diffusivity-learning options (see ablations/F*.yaml); defaults = the benchmarked model
+            diff_init_scale=config['experiments'].get('airlapse_diff_init_scale', 0.01),
+            exact_log_green=config['experiments'].get('airlapse_exact_log_green', False),
             **_extra,
         )
     elif exp_model == 'Transformer':
@@ -862,6 +865,7 @@ def main():
     # Efficiency metrics, commonly reported alongside accuracy in papers:
     # model size, wall-clock training cost, inference latency, peak memory.
     param_count_list, epoch_time_list, inference_time_list, peak_memory_list = [], [], [], []
+    physics_reports = []   # AirLapse: learned diffusivities etc. of each repeat's best epoch
 
     for exp_idx in range(exp_repeat):
         # Repeat k uses seed SEED + k (env SEED, default 0), so every repeat is
@@ -881,7 +885,16 @@ def main():
         model_name = type(model).__name__
         param_count = sum(p.numel() for p in model.parameters())
 
-        optimizer = torch.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
+        params = model.parameters()
+        if config['experiments'].get('airlapse_physics_no_weight_decay', False) and hasattr(model, 'PHYSICS_PARAM_KEYS'):
+            # physics parameters (diffusivity/relaxation MLPs, bonus weights, area, background)
+            # without weight decay, so it doesn't pull them back to their initial near-constant state
+            phys = [p for n, p in model.named_parameters() if any(k in n for k in model.PHYSICS_PARAM_KEYS)]
+            ids = {id(p) for p in phys}
+            params = [{'params': [p for p in model.parameters() if id(p) not in ids]},
+                      {'params': phys, 'weight_decay': 0.0}]
+            print(f'no weight decay on {sum(p.numel() for p in phys)} physics parameters')
+        optimizer = torch.optim.RMSprop(params, lr=lr, weight_decay=weight_decay)
 
         exp_model_dir = os.path.join(results_dir, '%s_%s' % (hist_len, pred_len), str(dataset_num), model_name, str(exp_time), '%02d' % exp_idx)
         if not os.path.exists(exp_model_dir):
@@ -893,6 +906,7 @@ def main():
 
         train_loss_, val_loss_ = 0, 0
         epoch_times = []
+        physics_report = ''
         running_peak_mb = reset_peak_memory()
 
         for epoch in range(epochs):
@@ -910,7 +924,11 @@ def main():
                 best_epoch = epoch
                 torch.save(model.state_dict(), model_fp)
 
+                if hasattr(model, 'start_diffusivity_recording'):
+                    model.start_diffusivity_recording()
                 test_loss, predict_epoch, label_epoch, time_epoch = test(test_loader, model)
+                if hasattr(model, 'diffusivity_report'):
+                    physics_report = model.diffusivity_report()
                 train_loss_, val_loss_ = train_loss, val_loss
                 rmse, mae, mape, csi, pod, far = get_metric(predict_epoch, label_epoch)
 
@@ -935,6 +953,7 @@ def main():
         epoch_time_list.append(np.mean(epoch_times) if epoch_times else float('nan'))
         inference_time_list.append(inference_time_ms)
         peak_memory_list.append(running_peak_mb)
+        physics_reports.append(physics_report)
 
     exp_metric_str = '---------------------------------------\n' + \
                      'train_loss | mean: %0.4f std: %0.4f\n' % (get_mean_std(train_loss_list)) + \
@@ -969,6 +988,9 @@ def main():
         f.write(exp_info)
         f.write(str(model))
         f.write(exp_metric_str)
+        for k, rep in enumerate(physics_reports):
+            if rep:
+                f.write(f'--- repeat {k}\n' + rep)
 
     # One more line, not a wall of them - full results (exp_info, model
     # summary, all metrics) live in this file, same as always.

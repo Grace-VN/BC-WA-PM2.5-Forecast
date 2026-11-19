@@ -144,6 +144,10 @@ TCN_DIR and STMamba are re-implementations from the papers and their public code
 | S_dist_threshold_{150,250,500} | neighbour radius in km (default 375) |
 | S_hidden_dim_{32,128} | hidden size (default 64) |
 | S_l1_weight_{0.25,1.0} | L1 weight in the loss (default 0.5; 0 is A9) |
+| F1_diff_fix | diffusivity-learning fix: normal-scale init of the diffusivity MLPs' output layer, no weight decay on physics parameters, exact log Green's function in the attention |
+| F2_diff_fix_isotropic, F3_diff_fix_const_diffusivity | A2 / A3 on top of F1 (compare with F1, not with the full model) |
+
+Each AirLapse run's metric file ends with physics diagnostics from its best epoch: mean, spread and coefficient of variation of the learned along- and cross-wind diffusivities (encoder and propagator), the relaxation time, and the learned attention weights. A coefficient of variation near 0 means the diffusivity network outputs a constant.
 
 **Efficiency (one GPU, one session):** `python efficiency.py` measures every benchmark model back to back on the same GPU without full training: parameters (total and actually used), model-compute time per training batch and per epoch, inference time per forecast and peak GPU memory, written to `efficiency.csv`. `python efficiency.py --plot <benchmark_summary.csv>` draws RMSE against training time. Use these numbers for the paper rather than the efficiency block of each run's metric file, which mixes GPUs and includes data loading.
 

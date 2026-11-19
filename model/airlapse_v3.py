@@ -51,17 +51,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from model.airlapse import haversine_km, bearing_deg, _inv_softplus
-from model.airlapse_v2 import AirLapseV2
+from model.airlapse_v2 import AirLapseV2, DiffusivityRecorder
 
 
-class GreenPropagator(nn.Module):
+class GreenPropagator(nn.Module, DiffusivityRecorder):
     """One forecast step of station-to-station advection-diffusion transport
     plus relaxation to a background, in ug/m3."""
 
     def __init__(self, station_coords, station_elevation, feature_dim, pm25_mean,
                  dist_threshold_km=375.0, dt_hours=1.0, diff_hidden_dim=16,
                  diffusivity_along_init=50.0, diffusivity_cross_init=50.0,
-                 area_init_km2=None, relax_tau_init_h=11.6, max_inflow=0.9, ablate=()):
+                 area_init_km2=None, relax_tau_init_h=11.6, max_inflow=0.9, ablate=(),
+                 diff_init_scale=0.01):
         super().__init__()
         self.ablate = frozenset(ablate)          # see ABLATIONS in model/airlapse_v2.py
         self.dt = float(dt_hours)
@@ -85,7 +86,7 @@ class GreenPropagator(nn.Module):
         self.diff_mlp = nn.Sequential(nn.Linear(5, diff_hidden_dim), nn.Tanh(),
                                       nn.Linear(diff_hidden_dim, 2))
         with torch.no_grad():
-            self.diff_mlp[-1].weight.mul_(0.01)
+            self.diff_mlp[-1].weight.mul_(diff_init_scale)      # default 0.01: start near-constant
             self.diff_mlp[-1].bias[0] = _inv_softplus(diffusivity_along_init)
             self.diff_mlp[-1].bias[1] = _inv_softplus(diffusivity_cross_init)
 
@@ -115,6 +116,9 @@ class GreenPropagator(nn.Module):
         D_al, D_cr = D[..., 0].unsqueeze(1), D[..., 1].unsqueeze(1)      # [B, 1, src]
         if 'isotropic' in self.ablate:
             D_cr = D_al
+        self._record('decoder_D_along', D_al)
+        self._record('decoder_D_cross', D_cr)
+        self._record('decoder_D_ratio', D_al / D_cr)
 
         t = self.dt
         v = torch.zeros_like(speed).unsqueeze(1) if 'no_advection' in self.ablate else speed.unsqueeze(1)
@@ -131,6 +135,7 @@ class GreenPropagator(nn.Module):
         if 'no_relaxation' in self.ablate:
             return c
         k = F.softplus(self.relax_mlp(feat)).squeeze(-1)                 # [B, N], 1/h
+        self._record('decoder_relax_tau_h', 1.0 / k.clamp(min=1e-6))
         b = F.softplus(self.raw_background)
         return b + (c - b) * torch.exp(-k * self.dt)
 
@@ -159,7 +164,7 @@ class AirLapseV3(AirLapseV2):
             diffusivity_along_init=prop_diffusivity_along_init,
             diffusivity_cross_init=prop_diffusivity_cross_init,
             area_init_km2=area_init_km2, relax_tau_init_h=relax_tau_init_h,
-            max_inflow=max_inflow, ablate=self.ablate)
+            max_inflow=max_inflow, ablate=self.ablate, diff_init_scale=self.diff_init_scale)
         # the decoder also sees the physics forecast for its station
         self.decoder_cell = nn.GRUCell(self.feature_dim + self.latent_dim + 1, self.hidden_dim)
         with torch.no_grad():                    # start from the physics forecast

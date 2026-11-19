@@ -1,0 +1,8 @@
+# full model with the diffusivity-learning fix: normal-scale init of the diffusivity
+# MLPs' output layer, no weight decay on physics parameters, exact log Green's
+# function in the attention (gradients also where G << 1e-6). Compare with AirLapseV3.
+# python run_ablations.py --only F1_diff_fix
+experiments:
+  airlapse_diff_init_scale: 1.0
+  airlapse_exact_log_green: true
+  airlapse_physics_no_weight_decay: true

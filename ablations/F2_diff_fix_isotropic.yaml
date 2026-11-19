@@ -1,0 +1,8 @@
+# F1 (diffusivity fix) + isotropic diffusion: compare with F1, not with AirLapseV3
+# python run_ablations.py --only F2_diff_fix_isotropic
+experiments:
+  airlapse_diff_init_scale: 1.0
+  airlapse_exact_log_green: true
+  airlapse_physics_no_weight_decay: true
+  airlapse_ablate:
+  - isotropic

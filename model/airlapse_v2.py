@@ -116,7 +116,33 @@ ABLATIONS = {
 }
 
 
-class AdaptivePhysicsTransport2D(nn.Module):
+class DiffusivityRecorder:
+    """Mixin: while recording is on (AirLapseV2.start_diffusivity_recording,
+    called by train.py around its test pass), accumulates count/sum/sum of
+    squares/min/max of each named tensor, e.g. the along- and cross-wind
+    diffusivities - to check whether they actually vary after training."""
+
+    def start_recording(self):
+        self._dstats = {}
+
+    def stop_recording(self):
+        stats, self._dstats = getattr(self, '_dstats', None), None
+        return stats or {}
+
+    def _record(self, name, t):
+        stats = getattr(self, '_dstats', None)
+        if stats is None:
+            return
+        t = t.detach().float().flatten()
+        a = stats.setdefault(name, [0, 0.0, 0.0, float('inf'), float('-inf')])
+        a[0] += t.numel()
+        a[1] += t.sum().item()
+        a[2] += (t * t).sum().item()
+        a[3] = min(a[3], t.min().item())
+        a[4] = max(a[4], t.max().item())
+
+
+class AdaptivePhysicsTransport2D(nn.Module, DiffusivityRecorder):
     """
     Spatial mixing step for AirLapse V2. Structurally identical to
     MultiLagPhysicsAwareSpatialAttention (model/airlapse.py) - same
@@ -199,10 +225,14 @@ class AdaptivePhysicsTransport2D(nn.Module):
                  attn_dim=32, dist_threshold_km=300.0, sigma_d=200.0,
                  sigma_h=1200.0, sigma_tau_init_h=3.0, speed_floor_kmh=0.5,
                  diff_hidden_dim=16, diffusivity_along_init=50.0,
-                 diffusivity_cross_init=20.0, t_eps_hours=0.25, ablate=()):
+                 diffusivity_cross_init=20.0, t_eps_hours=0.25, ablate=(),
+                 diff_init_scale=0.01, exact_log_green=False):
         super().__init__()
         # Ablation switches (see ABLATIONS at the top of this file); empty = full model.
         self.ablate = frozenset(ablate)
+        # exact_log_green: attention uses the analytic log G (clamped at -60) instead of
+        # log(G + 1e-6), which is flat - no gradient - wherever G << 1e-6.
+        self.exact_log_green = exact_log_green
 
         self.q_proj = nn.Linear(hidden_dim, attn_dim, bias=False)
         self.k_proj = nn.Linear(hidden_dim, attn_dim, bias=False)
@@ -236,7 +266,7 @@ class AdaptivePhysicsTransport2D(nn.Module):
             nn.Linear(diff_hidden_dim, 2),
         )
         with torch.no_grad():
-            self.diff_mlp[-1].weight.mul_(0.01)  # start near-constant, not near-random
+            self.diff_mlp[-1].weight.mul_(diff_init_scale)  # default 0.01: start near-constant
             self.diff_mlp[-1].bias[0] = _inv_softplus(diffusivity_along_init)
             self.diff_mlp[-1].bias[1] = _inv_softplus(diffusivity_cross_init)
 
@@ -371,7 +401,15 @@ class AdaptivePhysicsTransport2D(nn.Module):
         # hand-crafted bonuses that predate this kernel). w_phys is free
         # to shrink toward 0 during training if this term doesn't earn
         # its keep, exactly like w_dist/w_wind/w_terrain/w_lag.
-        log_green_flat = _flatten(torch.log(green + 1e-6))
+        if self.exact_log_green:
+            log_green = (-torch.log(4.0 * math.pi * torch.sqrt(D_along * D_cross) * t_eff)
+                         - (along_term + cross_term)).clamp(min=-60.0)
+        else:
+            log_green = torch.log(green + 1e-6)
+        log_green_flat = _flatten(log_green)
+        self._record('encoder_D_along', D_along)
+        self._record('encoder_D_cross', D_cross)
+        self._record('encoder_D_ratio', D_along / D_cross)
 
         if 'no_phys_attention' in self.ablate:                           # content (query-key) attention only
             score = content_score
@@ -789,8 +827,9 @@ class AirLapseV2(nn.Module):
                  ode_diffusivity_along_init=50.0, ode_diffusivity_cross_init=20.0,
                  ode_t_eps_hours=0.25, ode_max_deriv=10.0, ode_reaction_term=False,
                  ode_method='dopri5', ode_rtol=1e-3, ode_atol=1e-4, ode_adjoint=True,
-                 ablate=()):
+                 ablate=(), diff_init_scale=0.01, exact_log_green=False):
         super(AirLapseV2, self).__init__()
+        self.diff_init_scale = diff_init_scale
         unknown = set(ablate) - set(ABLATIONS)
         if unknown:
             raise ValueError(f"unknown ablation(s) {sorted(unknown)}; choose from {list(ABLATIONS)}")
@@ -879,6 +918,8 @@ class AirLapseV2(nn.Module):
             diffusivity_cross_init=diffusivity_cross_init,
             t_eps_hours=t_eps_hours,
             ablate=self.ablate,
+            diff_init_scale=diff_init_scale,
+            exact_log_green=exact_log_green,
         )
         # +1: the explicit scalar transport estimate, concatenated alongside
         # h_grid and the learned attention context.
@@ -916,6 +957,39 @@ class AirLapseV2(nn.Module):
             self.ode_init_proj = nn.Linear(4, ode_latent_dim)
             self.ode_phy_to_hidden = nn.Linear(ode_latent_dim, hidden_dim)
             self.ode_fusion_gate = nn.Linear(hidden_dim * 2, hidden_dim)
+
+    # Names of the physics parameters (train.py can exempt them from weight decay).
+    PHYSICS_PARAM_KEYS = ('diff_mlp', 'relax_mlp', 'w_dist', 'w_wind', 'w_terrain', 'w_lag',
+                          'w_phys', 'log_sigma_tau', 'log_area', 'raw_background')
+
+    def start_diffusivity_recording(self):
+        for m in self.modules():
+            if isinstance(m, DiffusivityRecorder):
+                m.start_recording()
+
+    def diffusivity_report(self):
+        """Text block: statistics of the diffusivities recorded since
+        start_diffusivity_recording (train.py: the best epoch's test pass) and
+        the learned physics weights. CV = std / mean - near 0 means the
+        diffusivity network outputs (almost) a constant."""
+        lines = ['Physics diagnostics (best epoch, test set):']
+        for m in self.modules():
+            if not isinstance(m, DiffusivityRecorder):
+                continue
+            for name, (n, s, ss, lo, hi) in sorted(m.stop_recording().items()):
+                mean = s / max(n, 1)
+                std = max(ss / max(n, 1) - mean ** 2, 0.0) ** 0.5
+                lines.append(f'{name:18s} | mean: {mean:.3f} std: {std:.3f} cv: {std / max(abs(mean), 1e-12):.4f} '
+                             f'min: {lo:.3f} max: {hi:.3f}')
+        attn = self.spatial_attn
+        w = {k: getattr(attn, k).item() for k in ('w_dist', 'w_wind', 'w_terrain', 'w_lag', 'w_phys')}
+        w['sigma_tau_h'] = F.softplus(attn.log_sigma_tau).item()
+        prop = getattr(self, 'propagator', None)
+        if prop is not None:
+            w['area_km2'] = prop.log_area.exp().item()
+            w['background_mean'] = F.softplus(prop.raw_background).mean().item()
+        lines.append('learned            | ' + ' '.join(f'{k}: {v:.4f}' for k, v in w.items()))
+        return '\n'.join(lines) + '\n'
 
     def _wind_at_idxs(self, feature_hist, idxs, B, N):
         """De-normalize the dataset's precomputed speed(km/h)/direction(deg,
