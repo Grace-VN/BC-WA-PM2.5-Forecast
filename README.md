@@ -147,6 +147,8 @@ TCN_DIR and STMamba are re-implementations from the papers and their public code
 | F1_diff_fix | diffusivity-learning fix: normal-scale init of the diffusivity MLPs' output layer, no weight decay on physics parameters, exact log Green's function in the attention |
 | F2_diff_fix_isotropic, F3_diff_fix_const_diffusivity | A2 / A3 on top of F1 (compare with F1, not with the full model) |
 
+**Rebased study:** `python run_ablations.py --base F3_diff_fix_const_diffusivity` reruns every A*/S* scenario on top of F3 (the chosen fix): each scenario's settings are merged onto F3's (`airlapse_ablate` lists combined), labelled `F3+<scenario>`, and compared with F3's own run of the same seed (`ablation_summary_F3.csv`). F* scenarios and A3 (already part of F3) are skipped; `--only A1_no_advection ...` takes the plain names. Merged override files are kept in `METRICS_DIR/overrides/`.
+
 Each AirLapse run's metric file ends with physics diagnostics from its best epoch: mean, spread and coefficient of variation of the learned along- and cross-wind diffusivities (encoder and propagator), the relaxation time, and the learned attention weights. A coefficient of variation near 0 means the diffusivity network outputs a constant.
 
 **Efficiency (one GPU, one session):** `python efficiency.py` measures every benchmark model back to back on the same GPU without full training: parameters (total and actually used), model-compute time per training batch and per epoch, inference time per forecast and peak GPU memory, written to `efficiency.csv`. `python efficiency.py --plot <benchmark_summary.csv>` draws RMSE against training time. Use these numbers for the paper rather than the efficiency block of each run's metric file, which mixes GPUs and includes data loading.
