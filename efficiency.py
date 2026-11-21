@@ -26,11 +26,17 @@ resumes with the models still missing. ODE models (AirPhyNet, AirDualODE,
 AirDDE) use adaptive solvers whose cost changes during training; here they are
 timed at initialisation.
 
+A configuration variant of one model (e.g. the chosen fix F3) is measured with
+--overrides FILE --label NAME, the same flags as benchmark.py; its row is named NAME.
+
 Usage: python efficiency.py [--models AirLapseV3 GRU ...] [--batches 50]
                             [--warmup 5] [--infer_batches N] [--timeout_min 40] [--rerun]
-       python efficiency.py --plot ACCURACY.csv   # RMSE vs time figure
+       python efficiency.py --models AirLapseV3 --overrides ablations/F3_diff_fix_const_diffusivity.yaml
+                            --label F3_diff_fix_const_diffusivity
+       python efficiency.py --plot ACCURACY.csv [MORE.csv ...] [--drop AirLapseV3]
+                            [--names F3_diff_fix_const_diffusivity=AirLapse]
          (ACCURACY.csv: benchmark_summary.csv, or any CSV/XLSX with columns
-          model and RMSE_mean)
+          model and RMSE_mean; several files are combined)
 """
 import argparse
 import json
@@ -117,28 +123,34 @@ def run_all(args):
     sys.path.insert(0, REPO)
     from benchmark import DEFAULT_MODELS
     models = args.models or DEFAULT_MODELS
+    if args.label and len(models) != 1:
+        sys.exit("--label needs exactly one model")
+    overrides = yaml.safe_load(open(args.overrides, encoding="utf-8")) if args.overrides else {}
+    names = {m: (args.label or m) for m in models}
     os.makedirs(METRICS, exist_ok=True)
     done = pd.read_csv(OUT) if os.path.exists(OUT) else pd.DataFrame(columns=["model"])
     if args.rerun:
-        done = done[~done.model.isin(models)]
+        done = done[~done.model.isin(names.values())]
         done.to_csv(OUT, index=False)
-    todo = [m for m in models if m not in set(done.model)]
-    print(f"{len(todo)} model(s) to measure: {' '.join(todo) or 'none'} -> {OUT}", flush=True)
+    todo = [m for m in models if names[m] not in set(done.model)]
+    print(f"{len(todo)} model(s) to measure: {' '.join(names[m] for m in todo) or 'none'} -> {OUT}", flush=True)
 
     base = yaml.safe_load(open(os.path.join(REPO, "config.yaml"), encoding="utf-8"))
     for m in todo:
         cfg = yaml.safe_load(yaml.safe_dump(base))
+        for section in ("experiments", "train"):          # --overrides, as in benchmark.py
+            cfg[section].update(overrides.get(section) or {})
         cfg["experiments"].update(model=m, save_npy=False)
         cfg["train"].update(exp_repeat=1)
-        cfg_fp = os.path.join(METRICS, "configs", f"config_efficiency_{m}.yaml")
+        cfg_fp = os.path.join(METRICS, "configs", f"config_efficiency_{names[m]}.yaml")
         os.makedirs(os.path.dirname(cfg_fp), exist_ok=True)
         yaml.safe_dump(cfg, open(cfg_fp, "w"), sort_keys=False)
         env = dict(os.environ, CONFIG_FP=cfg_fp, SEED="0",
                    RESULTS_DIR=os.environ.get("RESULTS_DIR", os.path.join(REPO, "results")))
         t0 = time.time()
-        print(f"== {m}", flush=True)
+        print(f"== {names[m]}", flush=True)
         try:
-            r = subprocess.run([sys.executable, __file__, "--worker", m, "--batches", str(args.batches),
+            r = subprocess.run([sys.executable, __file__, "--worker", names[m], "--batches", str(args.batches),
                                 "--warmup", str(args.warmup)] + (["--infer_batches", str(args.infer_batches)] if args.infer_batches else []), cwd=REPO, env=env, capture_output=True,
                                text=True, timeout=args.timeout_min * 60)
         except subprocess.TimeoutExpired:
@@ -147,7 +159,7 @@ def run_all(args):
         line = [l for l in r.stdout.splitlines() if l.startswith("EFFICIENCY_JSON ")]
         if r.returncode or not line:
             print((r.stdout + r.stderr)[-2500:], flush=True)
-            print(f"   {m} failed", flush=True)
+            print(f"   {names[m]} failed", flush=True)
             continue
         row = json.loads(line[-1].split(" ", 1)[1])
         pd.DataFrame([row]).to_csv(OUT, mode="a", header=not os.path.exists(OUT), index=False)
@@ -162,22 +174,31 @@ def run_all(args):
     print(df.drop(columns=["torch", "batches_timed"]).sort_values("epoch_s").to_string(index=False))
 
 
-def plot(acc_fp):
+def plot(acc_fps, drop=(), names=()):
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
     eff = pd.read_csv(OUT)
-    acc = pd.read_excel(acc_fp) if acc_fp.endswith(".xlsx") else pd.read_csv(acc_fp)
-    acc["model"] = acc.model.astype(str).str.replace(r"\s*\(\d{4}\)", "", regex=True)
-    acc["model"] = acc.model.replace({"AirLapse": "AirLapseV3", "Airformer": "AirFormer"})   # result.xlsx names
-    df = eff.merge(acc[["model", "RMSE_mean"]], on="model").dropna(subset=["RMSE_mean"])
+    accs = []
+    for fp in acc_fps:
+        a = pd.read_excel(fp) if fp.endswith(".xlsx") else pd.read_csv(fp)
+        a["model"] = a.model.astype(str).str.replace(r"\s*\(\d{4}\)", "", regex=True)
+        a["model"] = a.model.replace({"AirLapse": "AirLapseV3", "Airformer": "AirFormer"})   # result.xlsx names
+        accs.append(a[["model", "RMSE_mean"]])
+    acc = pd.concat(accs).drop_duplicates("model", keep="last")
+    df = eff.merge(acc, on="model").dropna(subset=["RMSE_mean"])
+    df = df[~df.model.isin(drop)].copy()
+    rename = dict(n.split("=", 1) for n in names)
+    df["model"] = df.model.replace(rename)
+    print(df[["model", "params_used", "epoch_s", "infer_ms_sample", "peak_train_MB", "RMSE_mean"]]
+          .sort_values("RMSE_mean").to_string(index=False))
     plt.rcParams.update({"font.family": "serif", "font.serif": ["Times New Roman", "DejaVu Serif"],
                          "mathtext.fontset": "stix", "font.size": 8, "axes.spines.top": False,
                          "axes.spines.right": False, "savefig.dpi": 300, "savefig.bbox": "tight",
                          "pdf.fonttype": 42})
     fig, ax = plt.subplots(figsize=(3.5, 2.8))
     size = 12 + 120 * np.sqrt(df.params_used / df.params_used.max())
-    ours = df.model.str.startswith("AirLapse")
+    ours = df.model.str.startswith("AirLapse") | df.model.isin(rename.values())
     ax.scatter(df.epoch_s[~ours], df.RMSE_mean[~ours], s=size[~ours], c="0.6", edgecolor="k", lw=0.4, zorder=2)
     ax.scatter(df.epoch_s[ours], df.RMSE_mean[ours], s=size[ours], c="#D55E00", edgecolor="k", lw=0.4, zorder=3)
     for _, r in df.iterrows():
@@ -198,13 +219,17 @@ def main():
     ap.add_argument("--infer_batches", type=int, default=None, help="limit timed test batches (default: whole test set)")
     ap.add_argument("--timeout_min", type=float, default=40)
     ap.add_argument("--rerun", action="store_true", help="measure these models again")
-    ap.add_argument("--plot", metavar="ACCURACY_CSV", default=None)
+    ap.add_argument("--overrides", default=None, help="YAML merged into config.yaml (as benchmark.py)")
+    ap.add_argument("--label", default=None, help="row name for the overridden model")
+    ap.add_argument("--plot", metavar="ACCURACY_CSV", nargs="+", default=None)
+    ap.add_argument("--drop", nargs="+", default=[], help="--plot: models to leave out")
+    ap.add_argument("--names", nargs="+", default=[], help="--plot: OLD=NEW display names")
     ap.add_argument("--worker", default=None, help=argparse.SUPPRESS)
     args = ap.parse_args()
     if args.worker:
         worker(args.worker, args.batches, args.warmup, args.infer_batches)
     elif args.plot:
-        plot(args.plot)
+        plot(args.plot, args.drop, args.names)
     else:
         run_all(args)
 
