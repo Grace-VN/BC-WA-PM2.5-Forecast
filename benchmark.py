@@ -167,7 +167,9 @@ def train(model, repeat, args, base_cfg, timeout=None, name=None):
         raise RuntimeError(f"{model} failed (full log: {log_fp})")
     metric_fp = r.stdout.strip().splitlines()[-1]   # train.py prints its metric file last
     run_dir = os.path.dirname(metric_fp)
-    keep = os.path.join(METRICS, "runs", name, os.path.basename(run_dir))
+    # the repeat in the folder name: two streams of one model starting in the same
+    # second would otherwise share (and overwrite) one kept folder
+    keep = os.path.join(METRICS, "runs", name, f"{os.path.basename(run_dir)}_rep{repeat}")
     os.makedirs(keep, exist_ok=True)
     shutil.copy2(metric_fp, keep)
     return cfg, os.path.join(run_dir, "00")
