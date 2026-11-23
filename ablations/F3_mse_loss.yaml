@@ -1,0 +1,12 @@
+# F3 (the final AirLapse) trained with plain MSE, the loss every baseline uses:
+# isolates the effect of the MSE + 0.5*L1 objective for a like-for-like benchmark.
+# Run 5 seeds like the benchmark models, e.g.
+# python benchmark.py --models AirLapseV3 --label F3_mse_loss --overrides ablations/F3_mse_loss.yaml --repeats 5
+experiments:
+  airlapse_diff_init_scale: 1.0
+  airlapse_exact_log_green: true
+  airlapse_physics_no_weight_decay: true
+  airlapse_ablate:
+  - const_diffusivity
+train:
+  loss: mse
