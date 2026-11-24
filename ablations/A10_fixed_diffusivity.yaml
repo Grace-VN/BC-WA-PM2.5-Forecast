@@ -1,0 +1,7 @@
+# diffusivities not learned: held at their initial values (50 km2/h along- and crosswind,
+# the airlapsev2_/airlapsev3_diffusivity_*_init defaults) in the encoder and the decoder.
+# On top of F3 this tests whether LEARNING the diffusivity matters (F3 learns it from the same start).
+# python run_ablations.py --base F3_diff_fix_const_diffusivity --only A10_fixed_diffusivity
+experiments:
+  airlapse_ablate:
+  - fixed_diffusivity

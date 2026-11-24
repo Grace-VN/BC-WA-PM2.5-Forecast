@@ -110,6 +110,8 @@ ABLATIONS = {
     'no_advection': 'wind speed set to 0 in the Green\'s function (diffusion only)',
     'isotropic': 'cross-wind diffusivity tied to the along-wind one',
     'const_diffusivity': 'diffusivity MLP sees no context: one learned value per direction',
+    'fixed_diffusivity': 'diffusivities not learned: held at their initial values '
+                         '(diffusivity_along_init / diffusivity_cross_init) in encoder and decoder',
     'no_phys_attention': 'attention logits = query-key content only (no distance/wind/'
                          'terrain/lag bonuses, no log-Green term)',
     'no_relaxation': 'AirLapseV3 only: no relaxation toward the background (k = 0)',
@@ -233,6 +235,8 @@ class AdaptivePhysicsTransport2D(nn.Module, DiffusivityRecorder):
         # exact_log_green: attention uses the analytic log G (clamped at -60) instead of
         # log(G + 1e-6), which is flat - no gradient - wherever G << 1e-6.
         self.exact_log_green = exact_log_green
+        # values used by the 'fixed_diffusivity' ablation (km2/h)
+        self.fixed_D = (float(diffusivity_along_init), float(diffusivity_cross_init))
 
         self.q_proj = nn.Linear(hidden_dim, attn_dim, bias=False)
         self.k_proj = nn.Linear(hidden_dim, attn_dim, bias=False)
@@ -375,6 +379,9 @@ class AdaptivePhysicsTransport2D(nn.Module, DiffusivityRecorder):
         diff_raw = self.diff_mlp(context_jk)                              # [B,K,N_j,2]
         D_along = F.softplus(diff_raw[..., 0]).clamp(min=2.0, max=2000.0).unsqueeze(-1)  # [B,K,N_j,1]
         D_cross = F.softplus(diff_raw[..., 1]).clamp(min=2.0, max=2000.0).unsqueeze(-1)  # [B,K,N_j,1]
+        if 'fixed_diffusivity' in self.ablate:                           # not learned: initial values
+            D_along = torch.full_like(D_along, self.fixed_D[0])
+            D_cross = torch.full_like(D_cross, self.fixed_D[1])
         if 'isotropic' in self.ablate:                                   # no along/cross-wind distinction
             D_cross = D_along
 

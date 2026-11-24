@@ -65,6 +65,7 @@ class GreenPropagator(nn.Module, DiffusivityRecorder):
                  diff_init_scale=0.01):
         super().__init__()
         self.ablate = frozenset(ablate)          # see ABLATIONS in model/airlapse_v2.py
+        self.fixed_D = (float(diffusivity_along_init), float(diffusivity_cross_init))  # 'fixed_diffusivity'
         self.dt = float(dt_hours)
         self.max_inflow = max_inflow
 
@@ -114,6 +115,9 @@ class GreenPropagator(nn.Module, DiffusivityRecorder):
             ctx = torch.zeros_like(ctx)
         D = F.softplus(self.diff_mlp(ctx)).clamp(2.0, 2000.0)           # km2/h
         D_al, D_cr = D[..., 0].unsqueeze(1), D[..., 1].unsqueeze(1)      # [B, 1, src]
+        if 'fixed_diffusivity' in self.ablate:                           # not learned: initial values
+            D_al = torch.full_like(D_al, self.fixed_D[0])
+            D_cr = torch.full_like(D_cr, self.fixed_D[1])
         if 'isotropic' in self.ablate:
             D_cr = D_al
         self._record('decoder_D_along', D_al)
