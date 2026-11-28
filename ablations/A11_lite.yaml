@@ -1,0 +1,13 @@
+# AirLapse-Lite: the three components whose single removal stayed within noise, removed together.
+#   no propagator -> plain GRU decoder (AirLapseV2); this also removes the decoder's relaxation
+#                    and the decoder's advection, which exist only inside the propagator
+#   no advection  -> wind drift removed from the encoder's Green's function (diffusion only)
+# Kept: GRU + temporal graph encoder, physics-guided attention with the (diffusion-only,
+# anisotropic, learned-constant) Green's function and its transport estimate, residual output.
+# python run_ablations.py --base F3_diff_fix_const_diffusivity --only A11_lite
+model: AirLapseV2
+train:
+  loss: mse_l1
+experiments:
+  airlapse_ablate:
+  - no_advection
